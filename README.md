@@ -27,18 +27,18 @@ Call:
 lm(formula = y ~ ., data = df)
 
 Residuals:
-    Min      1Q  Median      3Q     Max 
--37.278  -6.875   0.112   6.725  38.622 
+     Min       1Q   Median       3Q      Max 
+-2.90294 -0.58641  0.00453  0.73891  2.02803 
 
 Coefficients:
             Estimate Std. Error t value Seq. p-value  2.5%  97.5% 
-(Intercept)   0.9612    0.14349   6.699    1.331e-08 0.4148  1.508
-X1            1.9552    0.09919  19.712    1.683e-81 1.5680  2.342
-X2            3.1247    0.10135  30.831   6.710e-196 2.7296  3.520
-X3            3.8641    0.09965  38.777   6.854e-303 3.4753  4.253
-trt           2.2120    0.20088  11.012    3.417e-25 1.4650  2.959
+(Intercept)    0.924     0.1593    5.80    4.780e-06 0.4082  1.440
+X1             2.054     0.1196   17.18    2.747e-28 1.6577  2.451
+X2             3.050     0.1125   27.12    5.768e-43 2.6748  3.425
+X3             3.946     0.1043   37.82    2.089e-54 3.5953  4.296
+trt            2.318     0.2161   10.73    1.526e-15 1.6340  3.002
 
-Residual standard error: 10.04 on 9995 degrees of freedom
-Multiple R-squared:  0.229,	Adjusted R-squared:  0.2287 
-F-statistic: 742.4 on 4 and 9995 DF,  Seq. p-value: < 2.2e-16
+Residual standard error: 1.067 on 95 degrees of freedom
+Multiple R-squared:  0.9651,	Adjusted R-squared:  0.9636 
+F-statistic: 656.5 on 4 and 95 DF,  Seq. p-value: < 2.2e-16
 ```
