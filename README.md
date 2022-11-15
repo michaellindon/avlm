@@ -14,31 +14,37 @@ Contributors:
 > set.seed(1)
 > n=100
 > X = replicate(3, rnorm(n))
+> X = scale(X, center=TRUE, scale=FALSE)
 > trt = sample(c(0,1), size = n, replace = TRUE)
-> y = 1 + 2*X[,1] + 3*X[, 2]+ 4*X[, 3]+ 2.3*trt + rnorm(n)
+> y = 1 + 2*X[,1] + 3*X[, 2]+ 4*X[, 3]+ 2.3*trt + 2*X[,1]*trt + 3*X[, 2]*trt+ 0.4*X[, 3]*trt +  rnorm(n)
 > df = data.frame(X)
 > df$trt = trt
 > df$y = y
 
-> lmfit = lm(y~., data=df)
+> lmfit = lm(y~. + trt*.,data=df)
 > avsummary(lmfit)
 
+
 Call:
-lm(formula = y ~ ., data = df)
+lm(formula = y ~ . + trt * ., data = df)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--2.90294 -0.58641  0.00453  0.73891  2.02803 
+-3.00823 -0.56961  0.07473  0.78458  1.92584 
 
 Coefficients:
-            Estimate Std. Error t value Seq. p-value  2.5%  97.5% 
-(Intercept)    0.924     0.1593    5.80    4.780e-06 0.4082  1.440
-X1             2.054     0.1196   17.18    2.747e-28 1.6577  2.451
-X2             3.050     0.1125   27.12    5.768e-43 2.6748  3.425
-X3             3.946     0.1043   37.82    2.089e-54 3.5953  4.296
-trt            2.318     0.2161   10.73    1.526e-15 1.6340  3.002
+            Estimate Std. Error t value Seq. p-value   2.5%  97.5% 
+(Intercept)   0.9163     0.1586   5.776    5.632e-06  0.4021  1.430
+X1            1.8723     0.1809  10.352    7.565e-15  1.2921  2.453
+X2            2.8503     0.1828  15.590    1.838e-24  2.2643  3.436
+X3            3.9056     0.1594  24.499    1.051e-37  3.3891  4.422
+trt           2.3224     0.2157  10.769    1.842e-15  1.6393  3.006
+X1:trt        2.2998     0.2414   9.527    6.110e-13  1.5404  3.059
+X2:trt        3.3117     0.2325  14.243    1.523e-21  2.5786  4.045
+X3:trt        0.4801     0.2112   2.273    4.471e-01 -0.1899  1.150
 
-Residual standard error: 1.067 on 95 degrees of freedom
-Multiple R-squared:  0.9651,	Adjusted R-squared:  0.9636 
-F-statistic: 656.5 on 4 and 95 DF,  Seq. p-value: < 2.2e-16
+Residual standard error: 1.065 on 92 degrees of freedom
+Multiple R-squared:  0.9808,	Adjusted R-squared:  0.9793 
+F-statistic: 671.1 on 7 and 92 DF,  Seq. p-value: < 2.2e-16
+
 ```
