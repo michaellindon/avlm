@@ -27,6 +27,7 @@ MPxM = function(M, X){
 
 MP1M = function(M){
   n=dim(M)[1]
+  M = if(is.null(n)) matrix(M, ncol=1) else M
   Mbar = colSums(M)
   return(tcrossprod(Mbar)/n)
 }
