@@ -9,7 +9,7 @@ log_bf = function(t2, n, p, phi, z2){
 }
 
 log_bf_multivariate = function(delta, n, p, d, Phi, ZtZ, s2){
-  normalizing_constant =  if(d > 1) 0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) else 0.5*log(detPhi) - 0.5*log(Phi+ZtZ)
+  normalizing_constant =  if(d > 1) 0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) else 0.5*log(Phi) - 0.5*log(Phi+ZtZ)
   return (normalizing_constant +
         (0.5*(n-p))*(
           log(1+t(delta) %*% ZtZ %*% delta / (s2 * (n-p-d))) - 
