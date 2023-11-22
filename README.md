@@ -8,8 +8,8 @@ Contributors:
 
 ## Example Useage
 ```R
-> devtools::install_github("michaellindon/roshi")
-> library(roshi)
+> devtools::install_github("michaellindon/avlm")
+> library(avlm)
 
 > set.seed(1)
 > n=100

@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/reference/test_package.html#special-files
 
 library(testthat)
-library(roshi)
+library(avlm)
 
-test_check("roshi")
+test_check("avlm")
