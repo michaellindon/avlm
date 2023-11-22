@@ -1,5 +1,5 @@
-# Roshi
-An R package for doing fun sequntial/anytime-valid inference in linear models.
+# avlm
+An R package for doing fun sequntial/anytime-valid/safe inference in linear models.
 
 [https://arxiv.org/abs/2210.08589](https://arxiv.org/abs/2210.08589).
 
