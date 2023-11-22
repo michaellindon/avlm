@@ -4,10 +4,12 @@ log_bf = function(t2, nu, phi, z2){
 }
 
 log_bf_multivariate = function(delta, n, p, d, Phi, ZtZ, s2){
-  return (0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) + 
+  normalizing_constant =  if(d > 1) 0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) else 0.5*log(Phi) - 0.5*log(Phi+ZtZ)
+  sol = if(d>1) solve(ZtZ + Phi, ZtZ) else ZtZ / (ZtZ+Phi)
+  return (normalizing_constant +
         (0.5*(n-p))*(
           log(1+t(delta) %*% ZtZ %*% delta / (s2 * (n-p-d))) - 
-          log(1+t(delta) %*% (ZtZ - ZtZ %*% solve(ZtZ + Phi, ZtZ)) %*% delta / (s2 * (n-p-d)))))
+          log(1+t(delta) %*% (ZtZ - ZtZ %*% sol) %*% delta / (s2 * (n-p-d)))))
 }
 
 multivariate_F_sequential_p_value = function(lmfit, phi, s2) {
