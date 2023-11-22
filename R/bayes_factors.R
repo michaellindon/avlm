@@ -1,11 +1,6 @@
-derivative_log_bf = function(t2, n, p, phi, z2){
-  L = 1 / (n-p-1)
-  U = L* phi / (phi + z2)
-  return(0.5*(n-p)*(L/(1+t2*L) - U/(1+t2*U)))
-}
-
-log_bf = function(t2, n, p, phi, z2){
-  0.5*log(phi / (phi + z2) ) + (0.5 * (n-p)) *(log(1 + t2 / (n-p-1)) - log(1 + phi * t2 / ((n-p-1) * (phi + z2 ))))
+log_bf = function(t2, nu, phi, z2){
+  r <- phi / (phi + z2)
+  0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
 }
 
 log_bf_multivariate = function(delta, n, p, d, Phi, ZtZ, s2){

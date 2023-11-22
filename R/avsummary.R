@@ -30,25 +30,20 @@ avsummary = function(lmfit, alpha = 0.05, phi = 1) {
   s = mod$sigma
   s2 = s * s
   z2 = (s / stderrs) ^ 2
-  spvalues = pmin(1, exp(-1 * log_bf(tstats2, n, p, phi, z2)))
-  
-  approx_roots = log((phi + z2) / (phi * alpha * alpha)) * (phi + z2) /
-    z2
-  approx_radii = stderrs * sqrt(approx_roots)
-  approx_lowers = estimates - approx_radii
-  approx_uppers = estimates + approx_radii
-  
-  roots = newton(alpha, n, p, phi, z2, approx_roots)
-  exact_radii = stderrs * sqrt(roots)
-  exact_lowers = estimates - exact_radii
-  exact_uppers = estimates + exact_radii
+  nu = n - p - 1
+  spvalues = pmin(1, exp(-1 * log_bf(tstats2, nu, phi, z2)))
+  r <- phi / (phi + z2)
+  radii <- stderrs * sqrt(nu * ((1 - (r * alpha^2)^(1 / (nu + 1))) /
+    max(0, ((r * alpha^2)^(1 / (nu + 1))) - r)))
+  lowers = estimates - radii
+  uppers = estimates + radii
   
   mod$f_sequential_p_value = multivariate_F_sequential_p_value(lmfit, phi, s2)
   coefs = cbind(
     mod$coefficients[, -4],
     "Seq. p-value" = spvalues,
-    "CS lower" = exact_lowers,
-    "CS upper" = exact_uppers
+    "CS lower" = lowers,
+    "CS upper" = uppers
   )
   colnames(coefs)[5] = sprintf("%s%% ", 100 * alpha / 2)
   colnames(coefs)[6] = sprintf("%s%% ", 100 * (1 - alpha / 2))
