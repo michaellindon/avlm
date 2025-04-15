@@ -1,3 +1,22 @@
+log_G_t = function(t2, nu, n, g){
+  r <- g / (g + n)
+  0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
+}
+
+p_G_t = function(log_G_t_values){
+  return(min(1.0, exp(-log_G_t_values)))
+}
+
+log_G_f = function(f, d, nu, n, g){
+  r <- g / (g + n)
+  0.5 * d * log(r) + (0.5 * (nu+d)) * (log(1 + (d / nu) * f) - log(1 + r * (d / nu) * f  ))
+}
+
+p_t = function(t2, nu, phi, z2){
+  pmin(1, exp(-1 * log_E_t(t2, nu, phi, z2)))
+}
+
+
 log_E_t = function(t2, nu, phi, z2){
   r <- phi / (phi + z2)
   0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
