@@ -8,6 +8,17 @@
 #' @param ... Additional arguments passed to or from other methods.
 #'
 #' @return An enhanced \code{lm} object of class \code{avlm} with anytime-valid inference capabilities.
+#'
+#' @examples
+#' # Fit a linear model on the built-in mtcars dataset
+#' fit <- lm(mpg ~ wt + hp, data = mtcars)
+#'
+#' # Convert the standard lm object to an anytime-valid avlm object
+#' av_fit <- av(fit, g = 1)
+#'
+#' # Print the summary of the anytime-valid model
+#' summary(av_fit)
+#'
 #' @export
 av.lm <- function(model, g = 1, ...) {
   attr(model, "g") <- g
@@ -141,6 +152,18 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
 #' @param ... Additional arguments passed to or from other methods.
 #'
 #' @return A matrix with the lower and upper confidence limits for the specified parameters.
+#' 
+#' @examples
+#' # Fit a simple linear model using the mtcars dataset
+#' fit <- lm(mpg ~ wt + hp, data = mtcars)
+#'
+#' # Convert the standard lm object to an anytime-valid avlm object with precision parameter g = 1
+#' av_fit <- av(fit, g = 1)
+#'
+#' # Calculate and print confidence intervals for the coefficients
+#' conf_intervals <- confint(av_fit)
+#' print(conf_intervals)
+#' 
 #' @export
 confint.avlm <- function(object, parm, level = 0.95, ...) {
   # Get the standard confidence intervals from lm

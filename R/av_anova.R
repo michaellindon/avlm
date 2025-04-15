@@ -26,6 +26,20 @@ av.aov <- function(model, g = 1, ...) {
 #' @param ... Additional arguments passed to or from other methods.
 #'
 #' @return A summary object of class \code{summary.avaov} that includes the anytime-valid p-values.
+#' 
+#' @examples
+#' 
+#' # Fit an ANOVA model to the iris dataset.
+#' # This model tests whether the sepal length differs by species.
+#' fit_aov <- aov(Sepal.Length ~ Species, data = iris)
+#'
+#' # Convert the standard aov object to an anytime-valid aov (avaov) with precision parameter g = 1.
+#' av_fit_aov <- av(fit_aov, g = 1)
+#'
+#' # Print the summary of the anytime-valid ANOVA model.
+#' # The summary replaces standard p-values with anytime-valid p-values.
+#' summary(av_fit_aov)
+#' 
 #' @export
 summary.avaov <- function(object, ...) {
   # First get the regular aov summary
@@ -144,6 +158,23 @@ print.summary.avaov <- function(x, digits = max(3L, getOption("digits") - 3L),
 #' @param ... Additional arguments passed to or from other methods.
 #'
 #' @return An enhanced \code{aovlist} object of class \code{avaovlist} with anytime-valid properties.
+#' 
+#' @examples
+#' # Use the built-in ChickWeight dataset from the datasets package.
+#' # Subset the data to a few chicks to simplify the example.
+#' data("ChickWeight")
+#'
+#' # Fit a repeated measures ANOVA model.
+#' # The Error(Chick/Time) term specifies that there are repeated measures for each chick over time.
+#' fit_aov <- aov(weight ~ Diet + Error(Chick/Time), data =  ChickWeight)
+#'
+#' # Convert the standard aovlist object to an anytime-valid version with precision parameter g = 1.
+#' av_fit_aov <- av(fit_aov, g = 1)
+#'
+#' # Print the summary of the anytime-valid aovlist.
+#' # The summary replaces standard p-values with anytime-valid p-values.
+#' summary(av_fit_aov)
+#' 
 #' @export
 av.aovlist <- function(model, g = 1, ...) {
   # Apply the 'av' function to each element (which are aov objects)
@@ -168,6 +199,28 @@ av.aovlist <- function(model, g = 1, ...) {
 #' @param ... Additional arguments passed to or from other methods.
 #'
 #' @return A summary object of class \code{summary.avaovlist} where each table has updated anytime-valid p-values.
+#' 
+#' @examples
+#' # Example for summary.avaovlist: repeated measures ANOVA
+#'
+#' # Create a simple repeated measures dataset
+#' set.seed(123)
+#' subject <- factor(rep(1:10, each = 3))
+#' time <- factor(rep(c("pre", "post", "followup"), times = 10))
+#' response <- rnorm(30, mean = 10, sd = 2)
+#' data <- data.frame(subject, time, response)
+#'
+#' # Fit an ANOVA model with an Error term to account for repeated measures within subjects.
+#' # This produces an aovlist object with separate strata for subject and subject:time.
+#' fit_aov <- aov(response ~ time + Error(subject/time), data = data)
+#'
+#' # Convert the standard aovlist object to an anytime-valid version with a precision parameter g = 1.
+#' av_fit_aovlist <- av(fit_aov, g = 1)
+#'
+#' # Print the summary of the anytime-valid aovlist.
+#' # The summary replaces standard p-values with anytime-valid p-values.
+#' summary(av_fit_aovlist)
+#' 
 #' @export
 summary.avaovlist <- function(object, ...) {
   # Call the default summary.aovlist to get a list of summary tables

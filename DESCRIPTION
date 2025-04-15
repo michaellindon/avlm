@@ -1,14 +1,16 @@
 Package: avlm
-Title: Anytime Valid Inference for Linear Models
+Title: Safe Anytime Valid Inference for Linear Models
 Version: 0.0.0.9000
-Authors@R: 
-    person("Michael", "Lindon", , "michael.s.lindon@gmail.com", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0003-3694-5420"))
-Description: Combines old ideas (linear models) with new ideas (anytime valid inference).
+Authors@R: c(
+  person("Michael", "Lindon", email = "michael.s.lindon@gmail.com",
+  role = c("cre", "aut"))
+  )
+Maintainer: Michael Lindon <michael.s.lindon@gmail.com>
+Description: Implements the methodology documented in "Anytime-Valid Linear Models and Regression Adjusted Causal Inference in Randomized Experiments" <https://arxiv.org/abs/2210.08589>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.2
+RoxygenNote: 7.3.2
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
