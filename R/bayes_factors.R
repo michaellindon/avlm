@@ -12,6 +12,10 @@ log_G_f = function(f, d, nu, n, g){
   0.5 * d * log(r) + (0.5 * (nu+d)) * (log(1 + (d / nu) * f) - log(1 + r * (d / nu) * f  ))
 }
 
+p_G_f = function(log_G_f_values){
+  return(min(1.0, exp(-log_G_f_values)))
+}
+
 p_t = function(t2, nu, phi, z2){
   pmin(1, exp(-1 * log_E_t(t2, nu, phi, z2)))
 }

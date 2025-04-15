@@ -1,15 +1,8 @@
-#' @param model an lm object resulting from running lm(y~.,data=)
-#' @param g the precision of the mixture distribution on the standardized coefficients
-#' (regression coefficients divided by the residual standard deviation).
-#' If you are frequentist, a good rule of thumb is to set g to 1/MDE^2 where
-#' MDE is your estimate of the size of the standardized coefficients.
-#' If you are Bayesian, set g to be the precision of a Gaussian prior over
-#' the standardized coefficients.
-#' @return an "avlm" object
+
 #' @export
-av = function(model, g=1){
-  class(model) = c("avlm", "lm")
-  model$g = g
+av.lm <- function(model, g = 1, ...) {
+  attr(model, "g") <- g
+  class(model) <- c("avlm", class(model))
   return(model)
 }
 
@@ -22,8 +15,8 @@ summary.avlm <- function(object, ...) {
   class(summ) <- c("summary.avlm", "summary.lm")
   
   # Add any additional elements specific to avlm
-  g <- object$g
-  summ$g <- g
+  g <- attr(object, "g")
+  attr(summ, "g") <- g
   number_of_coefficients = dim(summ$cov.unscaled)[1]
   n = length(summ$residuals)
   t = summ$coefficients[, 't value']
@@ -86,7 +79,7 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
         "\n", sep = "")
 
     # Calculate custom p-value for F-statistic
-    g <- x$g
+    g <- attr(x, "g")
     f <- x$fstatistic[1]
     n = length(x$residuals)
     d = x$fstatistic[2]
@@ -99,10 +92,8 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
         format.pval(f_spvalue, digits = digits), "\n")
   }
   
-  # Print g parameter
-  cat("\nAnytime-Valid: TRUE\n")
-  # cat("Precision parameter g:", format(x$g, digits = digits), "\n")
-  
+  cat("Anytime-Valid: TRUE\n")
+
   invisible(x)
 }
 
@@ -115,7 +106,7 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   # Extract needed components for custom CI calculation
   coefs <- coef(object)
   se <- summary(object)$coefficients[, 2]
-  g <- object$g  # The avlm-specific parameter
+  g <- attr(object, "g")  # The avlm-specific parameter
   n <- length(object$residuals)
   
   # Parameter selection (same as in the standard method)
