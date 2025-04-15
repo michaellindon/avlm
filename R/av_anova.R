@@ -1,7 +1,13 @@
-av <- function(model, g = 1, ...) {
-  UseMethod("av", model)
-}
-
+#' Convert an aov Object to Anytime-Valid aov (avaov)
+#'
+#' Converts an object of class \code{aov} to an anytime-valid version by setting the
+#' precision parameter \code{g} as an attribute and updating the class.
+#'
+#' @param model An \code{aov} object resulting from an ANOVA analysis.
+#' @param g An integer precision parameter for anytime-valid inference. Default is 1.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return An object of class \code{avaov} with anytime-valid p-values.
 #' @export
 av.aov <- function(model, g = 1, ...) {
   attr(model, "g") <- g
@@ -10,6 +16,16 @@ av.aov <- function(model, g = 1, ...) {
 }
 
 
+#' Summary Method for Anytime-Valid aov Objects
+#'
+#' This method produces a summary for objects of class \code{avaov}. It first calls the
+#' default \code{summary.aov} method and then replaces the standard p-values with anytime-valid p-values 
+#' calculated using the precision parameter \code{g}.
+#'
+#' @param object An object of class \code{avaov} created by \code{av.aov}.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return A summary object of class \code{summary.avaov} that includes the anytime-valid p-values.
 #' @export
 summary.avaov <- function(object, ...) {
   # First get the regular aov summary
@@ -90,27 +106,45 @@ summary.avaov <- function(object, ...) {
   return(summ)
 }
 
+#' Print Method for summary.avaov Objects
+#'
+#' This method prints the summary of an \code{avaov} object. It captures the output
+#' from the default printing method, substitutes the header "Pr(>F)" with "p value", and adds
+#' a note indicating that anytime-valid inference is used.
+#'
+#' @param x An object of class \code{summary.avaov}.
+#' @param digits The number of significant digits to use when printing. Defaults to a value based on options.
+#' @param signif.stars Logical indicating whether significance stars should be printed.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return Invisibly returns the summary object.
 #' @export
 print.summary.avaov <- function(x, digits = max(3L, getOption("digits") - 3L), 
                                 signif.stars = getOption("show.signif.stars"), ...) {
   
-  # Use the standard printing method first
   output <- capture.output({
     NextMethod()
   })
   
   output <- gsub("Pr\\(>F\\)", "p value", output)
   cat(paste(output, collapse = "\n"))
-
-  # Then add information about anytime-validity
   cat("\nAnytime-Valid: TRUE\n")
 
   invisible(x)
 }
 
 
-
-# Method for objects of class 'aovlist'
+#' Convert an aovlist Object to Anytime-Valid aovlist (avaovlist)
+#'
+#' Applies the anytime-valid conversion to each component (typically \code{aov} objects)
+#' within an \code{aovlist}. The precision parameter \code{g} is stored as an attribute for later use.
+#'
+#' @param model An object of class \code{aovlist} representing a multi-stratum ANOVA model.
+#' @param g An integer precision parameter for anytime-valid inference. Default is 1.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return An enhanced \code{aovlist} object of class \code{avaovlist} with anytime-valid properties.
+#' @export
 av.aovlist <- function(model, g = 1, ...) {
   # Apply the 'av' function to each element (which are aov objects)
   new_list <- lapply(model, function(x) {
@@ -119,14 +153,22 @@ av.aovlist <- function(model, g = 1, ...) {
     else
       x
   })
-  # Store the precision parameter in the list
   attr(new_list, "g") <- g
-  # Set the class to include 'avaovlist'
   class(new_list) <- c("avaovlist", class(model))
   return(new_list)
 }
 
-# Summary method for objects of class 'avaovlist'
+
+#' Summary Method for Anytime-Valid aovlist Objects
+#'
+#' Generates a summary for an \code{avaovlist} object by processing each component's summary
+#' to replace the standard p-values with anytime-valid p-values calculated using the precision parameter \code{g}.
+#'
+#' @param object An object of class \code{avaovlist} created by \code{av.aovlist}.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return A summary object of class \code{summary.avaovlist} where each table has updated anytime-valid p-values.
+#' @export
 summary.avaovlist <- function(object, ...) {
   # Call the default summary.aovlist to get a list of summary tables
   summ <- NextMethod()
@@ -172,22 +214,28 @@ summary.avaovlist <- function(object, ...) {
   return(summ)
 }
 
-# Print method for summary objects of class 'avaovlist'
+
+#' Print Method for summary.avaovlist Objects
+#'
+#' Prints the summary for an \code{avaovlist} object by capturing the default output,
+#' modifying the p-value header, and displaying the anytime-valid status.
+#'
+#' @param x An object of class \code{summary.avaovlist} containing the summary of an anytime-valid aovlist.
+#' @param digits The number of significant digits to use when printing numeric values.
+#' @param signif.stars Logical indicating whether significance stars should be printed.
+#' @param ... Additional arguments passed to or from other methods.
+#'
+#' @return Invisibly returns the printed summary object.
+#' @export
 print.summary.avaovlist <- function(x, 
                                     digits = max(3L, getOption("digits") - 3L),
                                     signif.stars = getOption("show.signif.stars"), 
                                     ...) {
 
-  # Capture the standard printing output
   output <- capture.output({
     NextMethod()
   })
-  
-  # Optionally, rename the p-value column for clarity
   output <- sub("Pr\\(>F\\)", "p value", output)
   cat(paste(output, collapse = "\n"))
-  
-
-
   invisible(x)
 }
