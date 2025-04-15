@@ -1,9 +1,13 @@
-log_bf = function(t2, nu, phi, z2){
+log_E_t = function(t2, nu, phi, z2){
   r <- phi / (phi + z2)
   0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
 }
 
-log_bf_multivariate = function(delta, n, p, d, Phi, ZtZ, s2){
+p_t = function(t2, nu, phi, z2){
+  pmin(1, exp(-1 * log_E_t(t2, nu, phi, z2)))
+}
+
+log_E_f = function(delta, n, p, d, Phi, ZtZ, s2){
   normalizing_constant =  if(d > 1) 0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) else 0.5*log(Phi) - 0.5*log(Phi+ZtZ)
   sol = if(d>1) solve(ZtZ + Phi, ZtZ) else ZtZ / (ZtZ+Phi)
   return (normalizing_constant +
@@ -12,7 +16,7 @@ log_bf_multivariate = function(delta, n, p, d, Phi, ZtZ, s2){
           log(1+t(delta) %*% (ZtZ - ZtZ %*% sol) %*% delta / (s2 * (n-p-d)))))
 }
 
-multivariate_F_sequential_p_value = function(lmfit, phi, s2) {
+p_F = function(lmfit, phi, s2) {
   W = model.matrix(lmfit)
   p = 1
   n = dim(W)[1]
@@ -23,6 +27,6 @@ multivariate_F_sequential_p_value = function(lmfit, phi, s2) {
   ZtZ = MPxM(Z,W) - MP1M(Z)
   Phi = diag(d) * phi
   return (min(1, exp(
-    -1 * log_bf_multivariate(delta, n, p, d, Phi, ZtZ, s2)
+    -1 * log_E_f(delta, n, p, d, Phi, ZtZ, s2)
   )))
 }
