@@ -33,3 +33,36 @@ MP1M = function(M){
   Mbar = colSums(M)
   return(tcrossprod(Mbar)/n)
 }
+
+
+
+#' Computes the value of g such that width of the \eqn{1-\alpha} confidence interval 
+#' at sample size n is minimized
+#'
+#' @param n A positive sample size integer.
+#' @param number_of_coefficients A positive integer of coefficients in the full model
+#' @param alpha A positive numeric scalar in (0,1) for nominal Type I error.
+#'
+#' @return A positive numeric scalar representing the optimal \( g \) that minimizes the expression.
+#'
+#' @examples
+#' n <- 10000
+#' alpha <- 0.05
+#' g_star <- optimal_g(n, 5, alpha)
+#' cat("The optimal g is:", g_star, "\n")
+#'
+#' @export
+optimal_g <- function(n, number_of_coefficients, alpha) {
+  if (n <= 0 ) stop("n must be positive.")
+  if (n <= number_of_coefficients ) stop("n must be greater than number_of_coefficients")
+  if (alpha < 0 || alpha > 1) stop("alpha must be in (0,1).")
+ 
+  nu = n - number_of_coefficients
+  upper_bound <- n * alpha^(2/nu) / (1 - alpha^(2/nu))
+  lower_bound <- 1 # A small positive number to avoid division by zero
+  
+  opt_result <- optimize(t_radius, interval = c(lower_bound, upper_bound), nu = nu, n = n, alpha = alpha)
+  g_star <- opt_result$minimum
+
+  return(g_star)
+}

@@ -127,7 +127,8 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
     n = length(x$residuals)
     d = x$fstatistic[2]
     nu <- x$fstatistic[3] #n - p - d
-    f_spvalue = min(1.0, exp(-1*log_G_f(f, d, nu, n, g)))
+    log_G_f_value = log_G_f(f, d, nu, n, g)
+    f_spvalue = p_G_f(log_G_f_value)
     
     # Print F-statistic with custom p-value
     cat("F-statistic:", formatC(f, digits = digits), 
@@ -175,6 +176,8 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   se <- summary(object)$coefficients[, 2]
   g <- attr(object, "g")  # The avlm-specific parameter
   n <- length(object$residuals)
+  number_of_coefficients = length(se)
+  nu = n - number_of_coefficients
   
   # Parameter selection (same as in the standard method)
   if (missing(parm)) {
@@ -185,7 +188,8 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   
   # Calculate custom confidence intervals that incorporate g
   alpha <- 1 - level
-  critval <- sqrt(((g + n) / n) * log((g + n) / (g * alpha^2)))
+  t_rad <- t_radius(g, nu, n, alpha)
+
   
   # Create the CI matrix
   custom_ci <- matrix(NA, length(parm), 2)
@@ -198,8 +202,8 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
     param_name <- parm[i]
     if (param_name %in% names(coefs)) {
       idx <- which(names(coefs) == param_name)
-      custom_ci[i, 1] <- coefs[idx] - critval * se[idx]
-      custom_ci[i, 2] <- coefs[idx] + critval * se[idx]
+      custom_ci[i, 1] <- coefs[idx] - t_rad * se[idx]
+      custom_ci[i, 2] <- coefs[idx] + t_rad * se[idx]
     }
   }
   

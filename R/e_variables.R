@@ -1,3 +1,18 @@
+t_radius<- function(g, nu, n, alpha) {
+  # Compute T = g/(g+n)
+  T <- g / (g + n)
+  
+  # Calculate the powered term (T * alpha^2)^(1/(nu+1))
+  powered_term <- (T * alpha^2)^(1/(nu+1))
+  
+  # Compute the numerator and denominator of f(g)
+  numerator <- nu * (1 - powered_term)
+  denominator <- max(0, powered_term - T)
+  
+  return (sqrt(numerator / denominator))
+}
+
+
 log_G_t = function(t2, nu, n, g){
   r <- g / (g + n)
   0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))

@@ -6,7 +6,7 @@ Authors@R: c(
   role = c("cre", "aut"))
   )
 Maintainer: Michael Lindon <michael.s.lindon@gmail.com>
-Description: Implements the methodology documented in "Anytime-Valid Linear Models and Regression Adjusted Causal Inference in Randomized Experiments" <https://arxiv.org/abs/2210.08589>.
+Description: Implements the anytime valid methodology for linear models documented in "Anytime-Valid Linear Models and Regression Adjusted Causal Inference in Randomized Experiments" <https://arxiv.org/abs/2210.08589>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
