@@ -187,10 +187,6 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   alpha <- 1 - level
   critval <- sqrt(((g + n) / n) * log((g + n) / (g * alpha^2)))
   
-  # Example custom calculation (replace with your own method)
-  # Here we're adjusting the standard errors using g
-  adjusted_se <- se / sqrt(g)
-  
   # Create the CI matrix
   custom_ci <- matrix(NA, length(parm), 2)
   rownames(custom_ci) <- parm
@@ -202,8 +198,8 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
     param_name <- parm[i]
     if (param_name %in% names(coefs)) {
       idx <- which(names(coefs) == param_name)
-      custom_ci[i, 1] <- coefs[idx] - critval * adjusted_se[idx]
-      custom_ci[i, 2] <- coefs[idx] + critval * adjusted_se[idx]
+      custom_ci[i, 1] <- coefs[idx] - critval * se[idx]
+      custom_ci[i, 2] <- coefs[idx] + critval * se[idx]
     }
   }
   

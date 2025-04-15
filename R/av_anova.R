@@ -74,7 +74,8 @@ summary.avaov <- function(object, ...) {
           if (!is.na(f_values[j])) {
             # Skip the error row which doesn't have an F value
             if (j < error_row) {
-              av_pvalues[j] <- min(1.0, exp(-1 * log_G_f(f_values[j], d[j], nu, n, attr(object, "g"))))
+              log_G_f_value = log_G_f(f_values[j], d[j], nu, n, attr(object, "g"))
+              av_pvalues[j] <- p_G_f(log_G_f_value)
             } else {
               av_pvalues[j] <- NA
             }

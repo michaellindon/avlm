@@ -4,7 +4,7 @@ log_G_t = function(t2, nu, n, g){
 }
 
 p_G_t = function(log_G_t_values){
-  return(min(1.0, exp(-log_G_t_values)))
+  return(pmin(1.0, exp(-log_G_t_values)))
 }
 
 log_G_f = function(f, d, nu, n, g){
@@ -13,7 +13,7 @@ log_G_f = function(f, d, nu, n, g){
 }
 
 p_G_f = function(log_G_f_values){
-  return(min(1.0, exp(-log_G_f_values)))
+  return(pmin(1.0, exp(-log_G_f_values)))
 }
 
 p_t = function(t2, nu, phi, z2){
