@@ -59,7 +59,7 @@ optimal_g <- function(n, number_of_coefficients, alpha) {
  
   nu = n - number_of_coefficients
   upper_bound <- n * alpha^(2/nu) / (1 - alpha^(2/nu))
-  lower_bound <- 1 # A small positive number to avoid division by zero
+  lower_bound <- 1
   
   opt_result <- optimize(t_radius, interval = c(lower_bound, upper_bound), n = n, number_of_coefficients = number_of_coefficients, alpha = alpha)
   g_star <- opt_result$minimum
