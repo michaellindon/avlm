@@ -2,6 +2,10 @@ Package: avlm
 Title: Safe Anytime Valid Inference for Linear Models
 Version: 0.1.0
 Author: Michael Lindon <michael.s.lindon@gmail.com>
+Authors@R: person(given = "Michael",
+                  family = "Lindon",
+                  role = c("aut", "cre"),
+                  email = "michael.s.lindon@gmail.com")
 Maintainer: Michael Lindon <michael.s.lindon@gmail.com>
 Description: Implements the anytime valid methodology for linear models documented in "Anytime-Valid Linear Models and Regression Adjusted Causal Inference in Randomized Experiments" <doi:10.48550/arXiv.2210.08589>.
 License: MIT + file LICENSE
