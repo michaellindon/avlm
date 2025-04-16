@@ -43,7 +43,7 @@ MP1M = function(M){
 #' @param number_of_coefficients A positive integer of coefficients in the full model
 #' @param alpha A positive numeric scalar in (0,1) for nominal Type I error.
 #'
-#' @return A positive numeric scalar representing the optimal \( g \) that minimizes the expression.
+#' @return A positive numeric scalar representing the optimal \eqn{g} that minimizes the CI width.
 #'
 #' @examples
 #' n <- 10000
