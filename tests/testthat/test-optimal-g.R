@@ -19,8 +19,8 @@ test_that("optimal_g returns a value that minimizes t_radius", {
   g_left <- ifelse(g_star - delta > 1, g_star - delta, 1)  # ensure we don't go below 1 (our lower bound)
   g_right <- g_star + delta
   
-  f_left <- t_radius(g_left, nu, n, alpha)
-  f_right <- t_radius(g_right, nu, n, alpha)
+  f_left <- t_radius(g_left, n, number_of_coefficients, alpha)
+  f_right <- t_radius(g_right, n, number_of_coefficients, alpha)
   
   # Check that the value at g_star is less than or equal to values at adjacent grid points.
   expect_true(f_min <= f_left,
@@ -32,7 +32,7 @@ test_that("optimal_g returns a value that minimizes t_radius", {
   
   # Optionally, check over a larger grid around g_star.
   grid_points <- seq(max(1, g_star - 5*delta), g_star + 5*delta, length.out = 25)
-  grid_values <- sapply(grid_points, function(g) t_radius(g, nu, n, alpha))
+  grid_values <- sapply(grid_points, function(g) t_radius(g, n, number_of_coefficients, alpha))
   
   expect_true(all(grid_values >= f_min),
               info = "g_star does not provide a local minimum over a reasonable grid around it.")

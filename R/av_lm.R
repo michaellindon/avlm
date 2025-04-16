@@ -20,7 +20,7 @@
 #' summary(av_fit)
 #'
 #' @export
-av.lm <- function(model, g = 1, ...) {
+av.lm <- function(model, g = 1, robust = FALSE, ...) {
   attr(model, "g") <- g
   class(model) <- c("avlm", class(model))
   return(model)
@@ -187,7 +187,7 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   
   # Calculate custom confidence intervals that incorporate g
   alpha <- 1 - level
-  t_rad <- t_radius(g, nu, n, alpha)
+  t_rad <- t_radius(g, n, number_of_coefficients, alpha)
 
   
   # Create the CI matrix

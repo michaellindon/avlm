@@ -1,9 +1,11 @@
-t_radius<- function(g, nu, n, alpha) {
+t_radius<- function(g, n, number_of_coefficients, alpha) {
+  nu = n - number_of_coefficients
+  d = 1
   # Compute T = g/(g+n)
   T <- g / (g + n)
   
   # Calculate the powered term (T * alpha^2)^(1/(nu+1))
-  powered_term <- (T * alpha^2)^(1/(nu+1))
+  powered_term <- (T * alpha^2)^(1/(nu+d))
   
   # Compute the numerator and denominator of f(g)
   numerator <- nu * (1 - powered_term)
@@ -12,6 +14,9 @@ t_radius<- function(g, nu, n, alpha) {
   return (sqrt(numerator / denominator))
 }
 
+z_radius <- function(g, n, alpha){
+  return (sqrt( ((g + n) / n) * log((g + n) / (g * alpha^2))))
+}
 
 log_G_t = function(t2, nu, n, g){
   r <- g / (g + n)
