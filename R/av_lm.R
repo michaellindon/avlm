@@ -69,7 +69,6 @@ summary.avlm <- function(object, ...) {
 #'
 #' Custom print method for \code{summary.avlm} objects that mimics the standard \code{summary.lm} output,
 #' but replaces p-value column headers and includes anytime-valid annotations.
-#'
 #' @param x An object of class \code{summary.avlm} containing the summary of an anytime-valid lm object.
 #' @param digits The number of significant digits to use when printing. Defaults based on system options.
 #' @param signif.stars Logical indicating whether significance stars should be printed.

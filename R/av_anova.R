@@ -105,7 +105,7 @@ summary.avaov <- function(object, ...) {
         # Skip the error row
         if (j < error_row) {
           log_G_f_value = log_G_f(f_values[j], d[j], nu, n, attr(object,"g"))
-          av_pvalues[j] <- p_G_f(log_G_f_values)
+          av_pvalues[j] <- p_G_f(log_G_f_value)
         } else {
           av_pvalues[j] <- NA
         }
