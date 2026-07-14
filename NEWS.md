@@ -1,3 +1,13 @@
+# avlm (development version)
+
+## New Features
+
+- `av.lm()` gains a `cluster` argument for cluster-robust ("CRV1") standard errors,
+  following Cameron, Gelbach, and Miller (2011). When `cluster` is supplied, the
+  anytime-valid p-values, F-test, and confidence intervals use `G - 1` (clusters minus
+  one) as the denominator degrees of freedom, rather than `n - p` (observations minus
+  coefficients). `cluster` cannot be combined with `vcov_estimator`.
+
 # avlm 0.1.0
 
 ## New Features

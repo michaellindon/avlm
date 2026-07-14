@@ -1,5 +1,4 @@
-t_radius<- function(g, n, number_of_coefficients, alpha) {
-  nu = n - number_of_coefficients
+t_radius<- function(g, n, number_of_coefficients, alpha, nu = n - number_of_coefficients) {
   d = 1
   # Compute T = g/(g+n)
   T <- g / (g + n)
