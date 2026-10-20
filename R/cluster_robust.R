@@ -92,7 +92,11 @@ cluster_from_data <- function(model, cluster) {
 #' finite-sample factor \eqn{G/(G-1)} (Cameron and Miller, 2015), where \eqn{G} is the
 #' number of clusters. Unlike the Stata/fixest default, it omits the additional
 #' \eqn{(n-1)/(n-k)} factor, so that under a common within-cluster design it equals the
-#' sample covariance of the per-cluster OLS estimates divided by \eqn{G}.
+#' sample covariance of the per-cluster OLS estimates divided by \eqn{G}. This is the
+#' CR1 estimator of Lindon (2026), eq. (CR1).
+#'
+#' @references
+#' Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613. \url{https://arxiv.org/abs/2610.25613}
 #'
 #' @param model A fitted \code{lm} object.
 #' @param cluster_f A factor identifying the cluster membership of each observation used in the fit,
@@ -129,7 +133,7 @@ vcov_CR1 <- function(model, cluster_f) {
 
 #' Log Cluster-Robust e-Value for a Joint Wald Test
 #'
-#' The cluster-robust e-process (eq. ECR of the clustered theory), with \eqn{\nu = G - 1} and exponent
+#' The cluster-robust e-process of Lindon (2026), eq. (ECR), with \eqn{\nu = G - 1} and exponent
 #' \eqn{G/2} for any number \eqn{q} of tested coefficients:
 #' \deqn{E_G = \left(\frac{g}{g+G}\right)^{q/2}
 #' \left(\frac{1 + Q/(G-1)}{1 + \frac{g}{g+G} Q/(G-1)}\right)^{G/2}.}
@@ -140,6 +144,8 @@ vcov_CR1 <- function(model, cluster_f) {
 #' @param g The precision parameter, on the cluster scale.
 #'
 #' @return The log e-value.
+#' @references
+#' Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613. \url{https://arxiv.org/abs/2610.25613}
 #' @keywords internal
 log_E_CR <- function(Q, q, G, g) {
   r <- g / (g + G)

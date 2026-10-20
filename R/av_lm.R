@@ -19,6 +19,7 @@
 #' anytime-valid p-values and confidence intervals use \eqn{G - 1} (clusters minus one) as the
 #' denominator degrees of freedom, rather than \eqn{n - p} (observations minus coefficients),
 #' and the number of clusters \eqn{G} as the sample size, so \code{g} is on the cluster scale.
+#' The cluster-robust e-values and confidence sequences are those of Lindon (2026).
 #' Cannot be combined with \code{vcov_estimator}.
 #' @param ... Additional arguments passed to or from other methods.
 #'
@@ -41,6 +42,11 @@
 #' # Equivalent ways of specifying the clusters
 #' av_fit_cl <- av(fit, g = 1, cluster = "cyl")
 #' av_fit_cl <- av(fit, g = 1, cluster = mtcars$cyl)
+#'
+#' @references
+#' Lindon, M., Ham, D. W., Tingley, M., and Bojinov, I. (2026). Anytime-Valid Inference in Linear Models with Applications to Regression-Adjusted Causal Inference. \emph{Journal of the American Statistical Association}. \doi{10.1080/01621459.2026.2692052}
+#'
+#' Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613. \url{https://arxiv.org/abs/2610.25613}
 #'
 #' @export
 av.lm <- function(model, g = 1, vcov_estimator = NULL, cluster = NULL, ...) {
@@ -180,7 +186,7 @@ summary.avlm <- function(object, ...) {
       asymp_covariance_no_intercept <- asymp_covariance
     }
     # The Wald statistic inverts the covariance of the tested coefficients, and
-    # the F-statistic form that log_G_f expects is Q / d (Q_n / r in Lindon et al.)
+    # the F-statistic form that log_G_f expects is Q / d (Q_n / r in Lindon et al., 2026, JASA)
     fstatistic = t(beta_hat_no_intercept) %*% solve(asymp_covariance_no_intercept) %*% beta_hat_no_intercept
     summ$fstatistic[1] = fstatistic / length(beta_hat_no_intercept)
 

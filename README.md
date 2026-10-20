@@ -2,7 +2,9 @@
 Anytime-Valid replacements for base R's lm and aov functions (with additional robust standard error functionality).
 
 
-[https://arxiv.org/abs/2210.08589](https://arxiv.org/abs/2210.08589).
+Methodology:
+- Lindon, M., Ham, D. W., Tingley, M., and Bojinov, I. (2026). *Anytime-Valid Inference in Linear Models with Applications to Regression-Adjusted Causal Inference*. Journal of the American Statistical Association. [doi:10.1080/01621459.2026.2692052](https://doi.org/10.1080/01621459.2026.2692052) (preprint: [arXiv:2210.08589](https://arxiv.org/abs/2210.08589)).
+- Lindon, M. (2026). *Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences*. [arXiv:2610.25613](https://arxiv.org/abs/2610.25613). Cluster-robust inference via `av(fit, cluster = ~ id)`.
 
 Contributors:
 - Michael Lindon (michael.s.lindon@gmail.com)

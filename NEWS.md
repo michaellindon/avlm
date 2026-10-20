@@ -6,7 +6,9 @@
   sandwich scaled by `G / (G - 1)`, without Stata/fixest's extra `(n - 1) / (n - k)`). When `cluster` is supplied, the
   anytime-valid p-values, F-test, and confidence intervals use `G - 1` (clusters minus
   one) as the denominator degrees of freedom, rather than `n - p` (observations minus
-  coefficients). `cluster` cannot be combined with `vcov_estimator`.
+  coefficients). `cluster` cannot be combined with `vcov_estimator`. The method is described
+  in Lindon (2026), "Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact
+  Multivariate Tests and Cluster-Robust Confidence Sequences", <https://arxiv.org/abs/2610.25613>.
 - `cluster` accepts a vector of cluster identifiers, a one-sided formula (`cluster = ~ cyl`),
   or a column name (`cluster = "cyl"`). Formulas and column names are looked up in the
   model's `data` and aligned with the observations used in the fit.
