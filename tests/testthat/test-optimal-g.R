@@ -1,39 +1,34 @@
-library(testthat)
+test_that("optimal_g minimizes t_radius", {
+  for (n in c(10, 20, 50, 10000)) {
+    k <- 5
+    if (n <= k) next
+    alpha <- 0.05
+    nu <- n - k
+    g_star <- optimal_g(n, k, alpha)
+    f_min <- t_radius(g_star, n, alpha, nu)
 
-test_that("optimal_g returns a value that minimizes t_radius", {
-  # Set up parameters: n, number_of_coefficients, and alpha.
-  n <- 10000
-  number_of_coefficients <- 5
-  alpha <- 0.05
-  nu <- n - number_of_coefficients
-  
-  # Compute the optimal g using the function
-  g_star <- optimal_g(n, number_of_coefficients, alpha)
-  
-  # Evaluate t_radius at the optimal g
-  f_min <- t_radius(g_star, nu, n, alpha)
-  
-  # Create a small grid around g_star.
-  # We choose a relative shift (here 1% of g_star) to test local minimality.
-  delta <- max(g_star * 0.01, 1e-4)
-  g_left <- ifelse(g_star - delta > 1, g_star - delta, 1)  # ensure we don't go below 1 (our lower bound)
-  g_right <- g_star + delta
-  
-  f_left <- t_radius(g_left, n, number_of_coefficients, alpha)
-  f_right <- t_radius(g_right, n, number_of_coefficients, alpha)
-  
-  # Check that the value at g_star is less than or equal to values at adjacent grid points.
-  expect_true(f_min <= f_left,
-              info = sprintf("t_radius at g_star (%g) = %g should be <= t_radius at g_left (%g) = %g", 
-                             g_star, f_min, g_left, f_left))
-  expect_true(f_min <= f_right,
-              info = sprintf("t_radius at g_star (%g) = %g should be <= t_radius at g_right (%g) = %g", 
-                             g_star, f_min, g_right, f_right))
-  
-  # Optionally, check over a larger grid around g_star.
-  grid_points <- seq(max(1, g_star - 5*delta), g_star + 5*delta, length.out = 25)
-  grid_values <- sapply(grid_points, function(g) t_radius(g, n, number_of_coefficients, alpha))
-  
-  expect_true(all(grid_values >= f_min),
-              info = "g_star does not provide a local minimum over a reasonable grid around it.")
+    upper <- n * alpha^(2 / nu) / (1 - alpha^(2 / nu))
+    grid <- exp(seq(log(upper) - 20, log(upper), length.out = 2000))
+    grid_values <- sapply(grid, t_radius, n = n, alpha = alpha, nu = nu)
+    expect_lte(f_min, min(grid_values) + 1e-8)
+  }
+})
+
+test_that("optimal_g can go below 1 for small samples", {
+  # With n = 10 and two coefficients the minimizer is about 0.68; a lower bound of 1 missed it.
+  g_star <- optimal_g(10, 2, 0.05)
+  expect_lt(g_star, 1)
+})
+
+test_that("optimal_g accepts the cluster degrees of freedom", {
+  G <- 200
+  g_star <- optimal_g(G, alpha = 0.05, nu = G - 1)
+  grid <- exp(seq(log(g_star) - 2, log(g_star) + 2, length.out = 400))
+  expect_lte(t_radius(g_star, G, 0.05, G - 1),
+             min(sapply(grid, t_radius, n = G, alpha = 0.05, nu = G - 1)) + 1e-8)
+})
+
+test_that("optimal_g validates alpha", {
+  expect_error(optimal_g(100, 2, 0), "alpha")
+  expect_error(optimal_g(100, 2, 1), "alpha")
 })

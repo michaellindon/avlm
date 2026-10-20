@@ -9,7 +9,10 @@
 \arguments{
 \item{model}{An \code{lm} object from a linear model fit.}
 
-\item{g}{An integer precision parameter for anytime-valid inference. Default is 1.}
+\item{g}{A positive precision parameter for the anytime-valid mixture (see Lindon et al., 2026,
+Section 4.3.1). It acts like a prior sample size: larger values favour smaller effects and give
+narrower intervals at large \eqn{n}, at the cost of wider intervals at small \eqn{n}. Use
+\code{\link{optimal_g}} to choose it for a target sample size. Default is 1.}
 
 \item{vcov_estimator}{Optional character string specifying the type of heteroskedasticity-robust
 standard errors to use. Must be one of \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
