@@ -5,7 +5,7 @@ Authors@R: person(given = "Michael",
                   family = "Lindon",
                   role = c("aut", "cre"),
                   email = "michael.s.lindon@gmail.com")
-Description: Implements the anytime valid methodology for linear models documented in "Anytime-Valid Linear Models and Regression Adjusted Causal Inference in Randomized Experiments" <doi:10.48550/arXiv.2210.08589>.
+Description: Implements the anytime valid methodology for linear models documented in "Anytime-Valid Inference in Linear Models with Applications to Regression-Adjusted Causal Inference" <doi:10.1080/01621459.2026.2692052>, and its cluster-robust extension documented in "Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences" <doi:10.48550/arXiv.2610.25613>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

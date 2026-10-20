@@ -62,3 +62,25 @@ test_that("anytime-valid methods work with increasingly complex linear models", 
   expect_no_error(summary(av_complex_lm))
   expect_no_error(confint(av_complex_lm))
 })
+
+test_that("heteroskedasticity-robust F-statistic is Q / d, so its e-value uses Q / nu", {
+  fit <- lm(mpg ~ wt + hp + qsec, data = mtcars)
+  X <- model.matrix(fit)
+  e <- residuals(fit)
+  n <- nrow(X); k <- ncol(X)
+  bread <- solve(crossprod(X))
+  V <- (n / (n - k)) * bread %*% crossprod(X * e) %*% bread
+  b <- coef(fit)[-1]
+  Q <- as.numeric(t(b) %*% solve(V[-1, -1]) %*% b)
+  d <- length(b)
+
+  av_summary <- summary(av(fit, g = 1, vcov_estimator = "HC1"))
+  expect_equal(unname(av_summary$fstatistic[1]), Q / d, tolerance = 1e-8)
+
+  # Theorem (heteroskedasticity-robust e-process): Q / nu inside, exponent (nu + d) / 2
+  nu <- n - k
+  r <- 1 / (1 + n)
+  expected_log_E <- 0.5 * d * log(r) + 0.5 * (nu + d) * (log(1 + Q / nu) - log(1 + r * Q / nu))
+  f <- av_summary$fstatistic
+  expect_equal(unname(log_G_f(f[1], f[2], f[3], n, 1)), expected_log_E, tolerance = 1e-8)
+})
