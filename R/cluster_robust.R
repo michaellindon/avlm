@@ -1,13 +1,19 @@
 #' Resolve a Cluster Argument into a Factor Aligned with the Fitted Model
 #'
 #' @param model A fitted \code{lm} object.
-#' @param cluster A vector of cluster identifiers, one per observation used in the fit,
-#' or \code{NULL}.
+#' @param cluster \code{NULL}, a vector of cluster identifiers with one entry per observation
+#' used in the fit, a one-sided formula such as \code{~ cyl}, or a single column name such as
+#' \code{"cyl"}. Formulas and column names are looked up in the \code{data} the model was fit
+#' with and subset to the observations used in the fit.
 #'
 #' @return A factor of cluster identifiers, or \code{NULL} if \code{cluster} is \code{NULL}.
 #' @keywords internal
 resolve_cluster_factor <- function(model, cluster) {
   if (is.null(cluster)) return(NULL)
+
+  if (inherits(cluster, "formula") || (is.character(cluster) && length(cluster) == 1)) {
+    cluster <- cluster_from_data(model, cluster)
+  }
 
   n_used <- nrow(model.matrix(model))
   if (length(cluster) != n_used) {
@@ -15,6 +21,9 @@ resolve_cluster_factor <- function(model, cluster) {
       "length(cluster) (", length(cluster), ") must equal the number of ",
       "observations used in the fitted model (", n_used, ")."
     )
+  }
+  if (anyNA(cluster)) {
+    stop("cluster must not contain missing values.")
   }
 
   cluster_f <- factor(cluster)
@@ -24,13 +33,66 @@ resolve_cluster_factor <- function(model, cluster) {
   cluster_f
 }
 
+#' Look Up a Cluster Variable in the Data a Model Was Fit With
+#'
+#' @param model A fitted \code{lm} object.
+#' @param cluster A one-sided formula such as \code{~ cyl}, or a single column name.
+#'
+#' @return The cluster variable, subset to the observations used in the fit.
+#' @keywords internal
+cluster_from_data <- function(model, cluster) {
+  if (inherits(cluster, "formula")) {
+    if (length(cluster) != 2) {
+      stop("cluster formula must be one-sided, e.g. `cluster = ~ id`.")
+    }
+    rhs <- cluster[[2]]
+    if (is.call(rhs) && as.character(rhs[[1]]) %in% c("+", "*", ":", "^", "|", "/")) {
+      stop("Only one-way clustering is supported; cluster formula must contain a single variable.")
+    }
+    label <- deparse(rhs)
+  } else {
+    label <- cluster
+  }
+
+  data_expr <- model$call$data
+  if (is.null(data_expr)) {
+    stop(
+      "cluster = ", if (inherits(cluster, "formula")) "~ " else "", label,
+      " requires the model to be fit with a `data` argument; ",
+      "otherwise pass the vector of cluster identifiers."
+    )
+  }
+  data <- eval(data_expr, envir = environment(formula(model)))
+
+  if (inherits(cluster, "formula")) {
+    values <- eval(rhs, envir = data, enclos = environment(cluster))
+  } else {
+    if (!label %in% names(data)) {
+      stop("cluster variable '", label, "' not found in the model's data.")
+    }
+    values <- data[[label]]
+  }
+  if (length(values) != nrow(data)) {
+    stop("cluster variable '", label, "' must have one value per row of the model's data.")
+  }
+
+  # model.frame() keeps the row names of the rows used in the fit, so this drops
+  # rows removed by `subset` or by the `na.action`.
+  rows_used <- match(rownames(model.frame(model)), rownames(data))
+  if (anyNA(rows_used)) {
+    stop("Could not align cluster variable '", label, "' with the observations used in the fit.")
+  }
+  values[rows_used]
+}
+
 #' Compute a CR1 Cluster-Robust Covariance Matrix
 #'
-#' Computes the cluster-robust ("CRV1") sandwich covariance matrix for the coefficients
-#' of a fitted \code{lm} object, following the finite-sample-adjusted estimator of
-#' Cameron, Gelbach, and Miller (2011), i.e. the usual sandwich covariance matrix scaled by
-#' \eqn{(G/(G-1)) \times ((n-1)/(n-k))}, where \eqn{G} is the number of clusters, \eqn{n} is
-#' the number of observations, and \eqn{k} is the number of estimated coefficients.
+#' Computes the CR1 cluster-robust sandwich covariance matrix for the coefficients of a
+#' fitted \code{lm} object: the sandwich estimator of Liang and Zeger (1986) scaled by the
+#' finite-sample factor \eqn{G/(G-1)} (Cameron and Miller, 2015), where \eqn{G} is the
+#' number of clusters. Unlike the Stata/fixest default, it omits the additional
+#' \eqn{(n-1)/(n-k)} factor, so that under a common within-cluster design it equals the
+#' sample covariance of the per-cluster OLS estimates divided by \eqn{G}.
 #'
 #' @param model A fitted \code{lm} object.
 #' @param cluster_f A factor identifying the cluster membership of each observation used in the fit,
@@ -59,9 +121,44 @@ vcov_CR1 <- function(model, cluster_f) {
     meat <- meat + tcrossprod(Xeg)
   }
 
-  adj <- (G / (G - 1)) * ((n - 1) / (n - k))
-  vcov <- adj * (bread %*% meat %*% bread)
+  vcov <- (G / (G - 1)) * (bread %*% meat %*% bread)
   dimnames(vcov) <- list(colnames(X), colnames(X))
   attr(vcov, "G") <- G
   vcov
+}
+
+#' Log Cluster-Robust e-Value for a Joint Wald Test
+#'
+#' The cluster-robust e-process (eq. ECR of the clustered theory), with \eqn{\nu = G - 1} and exponent
+#' \eqn{G/2} for any number \eqn{q} of tested coefficients:
+#' \deqn{E_G = \left(\frac{g}{g+G}\right)^{q/2}
+#' \left(\frac{1 + Q/(G-1)}{1 + \frac{g}{g+G} Q/(G-1)}\right)^{G/2}.}
+#'
+#' @param Q The cluster-robust Wald statistic.
+#' @param q The number of tested coefficients.
+#' @param G The number of clusters.
+#' @param g The precision parameter, on the cluster scale.
+#'
+#' @return The log e-value.
+#' @keywords internal
+log_E_CR <- function(Q, q, G, g) {
+  r <- g / (g + G)
+  nu <- G - 1
+  0.5 * q * log(r) + 0.5 * G * (log1p(Q / nu) - log1p(r * Q / nu))
+}
+
+#' Check Whether a Covariance Matrix Is Numerically Singular
+#'
+#' Scale-invariant: checks the smallest eigenvalue of the implied correlation matrix.
+#'
+#' @param V A symmetric covariance matrix.
+#' @param tol Tolerance for the smallest eigenvalue of the correlation matrix.
+#'
+#' @return \code{TRUE} if \code{V} is numerically singular.
+#' @keywords internal
+is_singular_vcov <- function(V, tol = 1e-10) {
+  s <- sqrt(diag(V))
+  if (any(!is.finite(s)) || any(s <= 0)) return(TRUE)
+  C <- V / tcrossprod(s)
+  min(eigen(C, symmetric = TRUE, only.values = TRUE)$values) < tol
 }

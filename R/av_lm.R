@@ -9,11 +9,16 @@
 #' standard errors to use. Must be one of \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
 #' If \code{NULL} (default), no robust variance estimation is applied. Cannot be combined with
 #' \code{cluster}.
-#' @param cluster Optional vector of cluster identifiers, one per observation used in fitting
-#' \code{model}, e.g. a respondent or unit id. When supplied, standard errors are computed using
-#' the cluster-robust ("CRV1") sandwich estimator of Cameron, Gelbach, and Miller (2011), and the
+#' @param cluster Optional cluster specification for cluster-robust standard errors. Either a
+#' vector of cluster identifiers, one per observation used in fitting \code{model} (e.g. a
+#' respondent or unit id); a one-sided formula such as \code{~ cyl}; or a single column name
+#' such as \code{"cyl"}. Formulas and column names are evaluated in the \code{data} the model
+#' was fit with, and rows dropped from the fit (by \code{subset} or missing values) are dropped
+#' from the clusters too. Only one-way clustering is supported. When supplied, standard errors are computed using
+#' the CR1 cluster-robust sandwich estimator (scaled by \eqn{G/(G-1)}), and the
 #' anytime-valid p-values and confidence intervals use \eqn{G - 1} (clusters minus one) as the
-#' denominator degrees of freedom, rather than \eqn{n - p} (observations minus coefficients).
+#' denominator degrees of freedom, rather than \eqn{n - p} (observations minus coefficients),
+#' and the number of clusters \eqn{G} as the sample size, so \code{g} is on the cluster scale.
 #' Cannot be combined with \code{vcov_estimator}.
 #' @param ... Additional arguments passed to or from other methods.
 #'
@@ -30,8 +35,12 @@
 #' summary(av_fit)
 #'
 #' # With cluster-robust standard errors, clustering on number of cylinders
-#' av_fit_cl <- av(fit, g = 1, cluster = mtcars$cyl)
+#' av_fit_cl <- av(fit, g = 1, cluster = ~ cyl)
 #' summary(av_fit_cl)
+#'
+#' # Equivalent ways of specifying the clusters
+#' av_fit_cl <- av(fit, g = 1, cluster = "cyl")
+#' av_fit_cl <- av(fit, g = 1, cluster = mtcars$cyl)
 #'
 #' @export
 av.lm <- function(model, g = 1, vcov_estimator = NULL, cluster = NULL, ...) {
@@ -92,10 +101,12 @@ summary.avlm <- function(object, ...) {
   cluster_f = attr(object, "cluster")
 
   if (!is.null(cluster_f)) {
-    # Cluster-robust ("CRV1") standard errors. Following Cameron, Gelbach, and
+    # CR1 cluster-robust standard errors. Following Cameron, Gelbach, and
     # Miller (2011), the anytime-valid reference distribution uses G - 1 (clusters
     # minus one) as the denominator degrees of freedom, not n - p (observations
     # minus coefficients).
+    # The sample size in the anytime-valid mixture is G (clusters), so g is on
+    # the cluster scale.
     vcov_mat <- vcov_CR1(object, cluster_f)
     G <- attr(vcov_mat, "G")
     nu <- G - 1
@@ -104,7 +115,7 @@ summary.avlm <- function(object, ...) {
     se <- sqrt(diag(vcov_mat))
     t <- as.vector(beta_hat / se)
     t2 <- t ^ 2
-    log_G_t_values <- log_G_t(t2, nu, n, g)
+    log_G_t_values <- log_G_t(t2, nu, G, g)
     summ$coefficients[, 2] <- se
     summ$coefficients[, 3] <- t
     summ$coefficients[, 4] <- p_G_t(log_G_t_values)
@@ -118,13 +129,23 @@ summary.avlm <- function(object, ...) {
       vcov_sub <- vcov_mat
     }
     d_f <- length(beta_sub)
-    fstatistic <- as.numeric(t(beta_sub) %*% solve(vcov_sub) %*% beta_sub) / d_f
+    if (is_singular_vcov(vcov_sub)) {
+      # E = 1 (p-value 1) when the cluster-robust covariance of the tested
+      # coefficients is singular, e.g. when G <= d_f.
+      fstatistic <- NA_real_
+      log_E_f <- 0
+    } else {
+      Q <- as.numeric(t(beta_sub) %*% solve(vcov_sub) %*% beta_sub)
+      fstatistic <- Q / d_f
+      log_E_f <- log_E_CR(Q, d_f, G, g)
+    }
     summ$fstatistic[1] <- fstatistic
     summ$fstatistic[2] <- d_f
     summ$fstatistic[3] <- nu
 
     attr(summ, "vcov_estimator") <- "CR1"
     attr(summ, "cluster_G") <- G
+    attr(summ, "f_pvalue") <- p_G_f(log_E_f)
 
   } else if(is.null(vcov_estimator)){
     t = summ$coefficients[, 't value']
@@ -149,14 +170,21 @@ summary.avlm <- function(object, ...) {
 
     beta_hat <- object$coefficients
     asymp_precision = crossprod(X_star)
-    intercept_index <- which(names(beta_hat) == "(Intercept)")
-    beta_hat_no_intercept <- beta_hat[-intercept_index]
-    asymp_precision_no_intercept <- asymp_precision[-intercept_index, -intercept_index]
-    fstatistic = t(beta_hat_no_intercept) %*% asymp_precision_no_intercept %*% beta_hat_no_intercept
-    summ$fstatistic[1] = fstatistic
-
-
     asymp_covariance = solve(asymp_precision)
+    intercept_index <- which(names(beta_hat) == "(Intercept)")
+    if (length(intercept_index) == 1) {
+      beta_hat_no_intercept <- beta_hat[-intercept_index]
+      asymp_covariance_no_intercept <- asymp_covariance[-intercept_index, -intercept_index, drop = FALSE]
+    } else {
+      beta_hat_no_intercept <- beta_hat
+      asymp_covariance_no_intercept <- asymp_covariance
+    }
+    # The Wald statistic inverts the covariance of the tested coefficients, and
+    # the F-statistic form that log_G_f expects is Q / d (Q_n / r in Lindon et al.)
+    fstatistic = t(beta_hat_no_intercept) %*% solve(asymp_covariance_no_intercept) %*% beta_hat_no_intercept
+    summ$fstatistic[1] = fstatistic / length(beta_hat_no_intercept)
+
+
     std_errs <- sqrt(diag(asymp_covariance))
     t<- as.vector(beta_hat / std_errs)
     t2 = t ^ 2
@@ -235,8 +263,11 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
     n = length(x$residuals)
     d = x$fstatistic[2]
     nu <- x$fstatistic[3] #n - p - d
-    log_G_f_value = log_G_f(f, d, nu, n, g)
-    f_spvalue = p_G_f(log_G_f_value)
+    f_spvalue <- attr(x, "f_pvalue")
+    if (is.null(f_spvalue)) {
+      log_G_f_value = log_G_f(f, d, nu, n, g)
+      f_spvalue = p_G_f(log_G_f_value)
+    }
     
     # Print F-statistic with custom p-value
     cat("F-statistic:", formatC(f, digits = digits), 
@@ -293,11 +324,16 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
   n <- length(object$residuals)
   number_of_coefficients = length(se)
 
-  # Cameron-Gelbach-Miller: for cluster-robust ("CRV1") standard errors, use
+  # Cameron-Gelbach-Miller: for CR1 cluster-robust standard errors, use
   # G - 1 (clusters minus one) as the denominator degrees of freedom rather
   # than n - p (observations minus coefficients).
+  # The anytime-valid sample size is likewise G rather than n.
   cluster_f <- attr(object, "cluster")
-  nu <- if (!is.null(cluster_f)) nlevels(cluster_f) - 1 else n - number_of_coefficients
+  nu <- n - number_of_coefficients
+  if (!is.null(cluster_f)) {
+    n <- nlevels(cluster_f)
+    nu <- n - 1
+  }
 
   # Parameter selection (same as in the standard method)
   if (missing(parm)) {
