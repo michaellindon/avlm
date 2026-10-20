@@ -1,37 +1,3 @@
-# avlm (development version)
-
-## Bug Fixes
-
-- `confint()` no longer misplaces intervals when the fit has aliased (`NA`) coefficients;
-  previously every coefficient after an aliased one got `NA` or the wrong standard error.
-  Heteroskedasticity- and cluster-robust summaries of such fits no longer fail with a
-  singular-matrix error.
-- Heteroskedasticity- and cluster-robust standard errors now account for `weights`
-  (rows and residuals are scaled by `sqrt(w)`; zero weights are dropped). Previously the
-  weights were ignored, giving wrong standard errors for weighted fits.
-- Intercept-only models now work with `vcov_estimator` and `cluster`.
-- `cluster` now accepts one observation per cluster, which gives the HC0 sandwich scaled by
-  `n / (n - 1)`.
-- `optimal_g()` now searches below `g = 1`, where the optimum lies for small samples.
-- Anytime-valid ANOVA p-values use the number of observations as the sample size; models
-  without an intercept were off by one.
-- `av()` checks that `g` is a single positive number and gives informative errors for
-  `glm`, multivariate (`mlm`) and multi-stratum (`Error()`) fits instead of failing later or
-  returning meaningless output.
-
-## New Features
-
-- `vcov()` on an `avlm` object returns the covariance used for inference (classical, HC or
-  CR1).
-- `optimal_g()` gains a `nu` argument, so it can tune `g` for cluster-robust inference
-  (`optimal_g(G, nu = G - 1, alpha = 0.05)`).
-- The summary prints the value of `g`.
-
-## Internal
-
-- The classical, heteroskedasticity-robust and cluster-robust code paths share one
-  covariance routine, and unused helpers were removed.
-
 # avlm 0.2.0
 
 ## New Features
@@ -50,6 +16,11 @@
   the cluster scale, and the joint F-test uses the cluster-robust e-value with exponent `G/2`.
   The F-test p-value is 1 when the cluster-robust covariance of the tested coefficients is
   singular (e.g. fewer clusters than tested coefficients).
+- `vcov()` on an `avlm` object returns the covariance used for inference (classical, HC or
+  CR1).
+- `optimal_g()` gains a `nu` argument, so it can tune `g` for cluster-robust inference
+  (`optimal_g(G, nu = G - 1, alpha = 0.05)`).
+- The summary prints the value of `g`.
 
 ## Bug Fixes
 
@@ -57,6 +28,27 @@
   tested coefficients, inverting their covariance rather than taking a block of the full
   precision matrix, and stores it as `Q / d`. Previously the evidence was overstated when
   testing more than one coefficient.
+- `confint()` no longer misplaces intervals when the fit has aliased (`NA`) coefficients;
+  previously every coefficient after an aliased one got `NA` or the wrong standard error.
+  Heteroskedasticity- and cluster-robust summaries of such fits no longer fail with a
+  singular-matrix error.
+- Heteroskedasticity- and cluster-robust standard errors now account for `weights`
+  (rows and residuals are scaled by `sqrt(w)`; zero weights are dropped). Previously the
+  weights were ignored, giving wrong standard errors for weighted fits.
+- Intercept-only models now work with `vcov_estimator` and `cluster`.
+- `cluster` now accepts one observation per cluster, which gives the HC0 sandwich scaled by
+  `n / (n - 1)`.
+- `optimal_g()` now searches below `g = 1`, where the optimum lies for small samples.
+- Anytime-valid ANOVA p-values use the number of observations as the sample size; models
+  without an intercept were off by one.
+- `av()` checks that `g` is a single positive number and gives informative errors for
+  `glm`, multivariate (`mlm`) and multi-stratum (`Error()`) fits instead of failing later or
+  returning meaningless output.
+
+## Internal
+
+- The classical, heteroskedasticity-robust and cluster-robust code paths share one
+  covariance routine, and unused helpers were removed.
 
 # avlm 0.1.0
 

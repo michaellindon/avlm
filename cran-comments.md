@@ -1,7 +1,9 @@
 ## Submission
 
 This is an update of avlm (0.1.0 -> 0.2.0). It adds cluster-robust anytime-valid inference
-(`av(fit, cluster = ~ id)`), fixes the heteroskedasticity-robust F-test, and updates the
+(`av(fit, cluster = ~ id)`) and a `vcov()` method, fixes the heteroskedasticity-robust
+F-test and several edge cases (aliased coefficients, weighted fits, intercept-only models,
+`optimal_g()` for small samples), and updates the
 references in DESCRIPTION to the published JASA paper and the new arXiv paper on clustered
 outcomes. See NEWS.md for details.
 
