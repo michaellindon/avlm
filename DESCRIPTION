@@ -7,6 +7,8 @@ Authors@R: person(given = "Michael",
                   email = "michael.s.lindon@gmail.com")
 Description: Anytime-valid inference for linear models, namely, sequential t-tests, sequential F-tests, and confidence sequences with time-uniform Type-I error and coverage guarantees. This allows hypotheses to be continuously tested without sacrificing false positive guarantees. Heteroskedasticity-robust and cluster-robust versions are provided. It is based on the methods documented in Lindon et al. (2026) <doi:10.1080/01621459.2026.2692052> and Lindon (2026) <doi:10.48550/arXiv.2610.25613>.
 License: MIT + file LICENSE
+URL: https://github.com/michaellindon/avlm, https://michaellindon.github.io/avlm/
+BugReports: https://github.com/michaellindon/avlm/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Suggests: 

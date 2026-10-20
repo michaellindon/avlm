@@ -1,0 +1,30 @@
+url: https://michaellindon.github.io/avlm/
+template:
+  bootstrap: 5
+
+home:
+  links:
+  - text: JASA paper
+    href: https://doi.org/10.1080/01621459.2026.2692052
+  - text: Cluster-robust paper (arXiv)
+    href: https://arxiv.org/abs/2610.25613
+
+reference:
+- title: Anytime-valid models
+  desc: Convert a fitted `lm` or `aov` model into an anytime-valid one.
+  contents:
+  - av
+  - av.lm
+  - av.aov
+- title: Inference
+  contents:
+  - summary.avlm
+  - print.summary.avlm
+  - confint.avlm
+  - vcov.avlm
+  - anova.avlm
+  - summary.avaov
+  - print.summary.avaov
+- title: Tuning
+  contents:
+  - optimal_g
