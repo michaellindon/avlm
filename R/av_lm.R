@@ -38,13 +38,13 @@
 #' # Print the summary of the anytime-valid model
 #' summary(av_fit)
 #'
-#' # With cluster-robust standard errors, clustering on number of cylinders
-#' av_fit_cl <- av(fit, g = 1, cluster = ~ cyl)
+#' # With cluster-robust standard errors, clustering on number of carburetors
+#' av_fit_cl <- av(fit, g = 1, cluster = ~ carb)
 #' summary(av_fit_cl)
 #'
 #' # Equivalent ways of specifying the clusters
-#' av_fit_cl <- av(fit, g = 1, cluster = "cyl")
-#' av_fit_cl <- av(fit, g = 1, cluster = mtcars$cyl)
+#' av_fit_cl <- av(fit, g = 1, cluster = "carb")
+#' av_fit_cl <- av(fit, g = 1, cluster = mtcars$carb)
 #'
 #' @references
 #' Lindon, M., Ham, D. W., Tingley, M., and Bojinov, I. (2026). Anytime-Valid Inference in Linear Models with Applications to Regression-Adjusted Causal Inference. \emph{Journal of the American Statistical Association}. \doi{10.1080/01621459.2026.2692052}
@@ -100,7 +100,7 @@ summary.avlm <- function(object, ...) {
   class(summ) <- c("summary.avlm", "summary.lm")
 
   g <- attr(object, "g")
-  info <- av_vcov(object)
+  info <- av_vcov(object, summ)
   beta <- info$coefficients
   se <- sqrt(diag(info$vcov))
   t <- beta / se
@@ -248,6 +248,9 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
 #' 
 #' @export
 confint.avlm <- function(object, parm, level = 0.95, ...) {
+  if (!is.numeric(level) || length(level) != 1 || level <= 0 || level >= 1) {
+    stop("`level` must be a single number in (0, 1).")
+  }
   info <- av_vcov(object)
   coefs <- coef(object)
   pnames <- names(coefs)
@@ -282,7 +285,7 @@ confint.avlm <- function(object, parm, level = 0.95, ...) {
 #'
 #' @return A covariance matrix.
 #' @examples
-#' fit <- av(lm(mpg ~ wt + hp, data = mtcars), cluster = ~ cyl)
+#' fit <- av(lm(mpg ~ wt + hp, data = mtcars), cluster = ~ carb)
 #' vcov(fit)
 #' @export
 vcov.avlm <- function(object, complete = TRUE, ...) {

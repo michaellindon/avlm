@@ -8,7 +8,7 @@ test_that("aliased coefficients do not shift confidence intervals onto the wrong
   d <- aliased_data()
   fit <- lm(mpg ~ wt + wt2 + hp, data = d)
   ref <- lm(mpg ~ wt + hp, data = d)
-  for (args in list(list(), list(vcov_estimator = "HC1"), list(cluster = ~ cyl))) {
+  for (args in list(list(), list(vcov_estimator = "HC1"), list(cluster = ~ carb))) {
     ci <- confint(do.call(av, c(list(fit), args)))
     ci_ref <- confint(do.call(av, c(list(ref), args)))
     expect_true(all(is.na(ci["wt2", ])))
@@ -20,7 +20,7 @@ test_that("robust and clustered summaries work with aliased coefficients", {
   d <- aliased_data()
   fit <- lm(mpg ~ wt + wt2 + hp, data = d)
   ref <- lm(mpg ~ wt + hp, data = d)
-  for (args in list(list(vcov_estimator = "HC3"), list(cluster = ~ cyl))) {
+  for (args in list(list(vcov_estimator = "HC3"), list(cluster = ~ carb))) {
     s <- summary(do.call(av, c(list(fit), args)))
     s_ref <- summary(do.call(av, c(list(ref), args)))
     expect_equal(s$coefficients, s_ref$coefficients, tolerance = 1e-10)
@@ -39,10 +39,10 @@ test_that("robust and clustered standard errors account for weights", {
   V_hc0 <- bread %*% crossprod(X * e) %*% bread
   expect_equal(unname(vcov(av(fit, vcov_estimator = "HC0"))), unname(V_hc0), tolerance = 1e-10)
 
-  scores <- rowsum(X * e, mtcars$cyl)
+  scores <- rowsum(X * e, mtcars$carb)
   G <- nrow(scores)
   V_cr1 <- G / (G - 1) * bread %*% crossprod(scores) %*% bread
-  expect_equal(unname(vcov(av(fit, cluster = ~ cyl))), unname(V_cr1), tolerance = 1e-10)
+  expect_equal(unname(vcov(av(fit, cluster = ~ carb))), unname(V_cr1), tolerance = 1e-10)
 })
 
 test_that("observations with zero weight are dropped from robust inference", {
@@ -54,13 +54,13 @@ test_that("observations with zero weight are dropped from robust inference", {
     expect_equal(summary(do.call(av, c(list(fit_w), args)))$coefficients,
                  summary(do.call(av, c(list(fit_sub), args)))$coefficients, tolerance = 1e-10)
   }
-  expect_equal(summary(av(fit_w, cluster = mtcars$cyl))$coefficients,
-               summary(av(fit_sub, cluster = mtcars$cyl[-(1:4)]))$coefficients, tolerance = 1e-10)
+  expect_equal(summary(av(fit_w, cluster = mtcars$carb))$coefficients,
+               summary(av(fit_sub, cluster = mtcars$carb[-(1:4)]))$coefficients, tolerance = 1e-10)
 })
 
 test_that("intercept-only models work with robust and clustered standard errors", {
   fit <- lm(mpg ~ 1, data = mtcars)
-  for (args in list(list(), list(vcov_estimator = "HC0"), list(cluster = ~ cyl))) {
+  for (args in list(list(), list(vcov_estimator = "HC0"), list(cluster = ~ carb))) {
     s <- summary(do.call(av, c(list(fit), args)))
     expect_null(s$fstatistic)
     expect_output(print(s), "Anytime-Valid: TRUE")

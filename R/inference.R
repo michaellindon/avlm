@@ -16,12 +16,13 @@
 #' residuals are scaled by \eqn{\sqrt{w}} and observations with zero weight are dropped.
 #'
 #' @param object An \code{avlm} object.
+#' @param summ Optionally, \code{summary.lm(object)}, to avoid computing it twice.
 #'
 #' @return A list with elements \code{coefficients} (non-aliased estimates), \code{vcov},
 #' \code{nu}, \code{n}, \code{type} (\code{"classical"}, an \code{HC} type, or \code{"CR1"})
 #' and \code{G} (number of clusters, or \code{NULL}).
 #' @keywords internal
-av_vcov <- function(object) {
+av_vcov <- function(object, summ = NULL) {
   beta <- coef(object)
   ok <- !is.na(beta)
   beta <- beta[ok]
@@ -33,7 +34,7 @@ av_vcov <- function(object) {
   cluster_f <- attr(object, "cluster")
 
   if (is.null(vcov_estimator) && is.null(cluster_f)) {
-    s <- summary.lm(object)
+    s <- if (is.null(summ)) summary.lm(object) else summ
     V <- (s$sigma^2 * s$cov.unscaled)[names(beta), names(beta), drop = FALSE]
     return(list(coefficients = beta, vcov = V, nu = nu_obs, n = n_obs,
                 type = "classical", G = NULL))
@@ -54,6 +55,10 @@ av_vcov <- function(object) {
     scores <- rowsum(X * e, cluster_f, reorder = FALSE)
     G <- nrow(scores)
     if (G < 2) stop("cluster must have at least 2 distinct levels among the fitted observations.")
+    if (G <= ncol(X)) {
+      warning("Only ", G, " clusters for ", ncol(X), " coefficients: the cluster-robust ",
+              "covariance is singular and the resulting inference is not meaningful.")
+    }
     V <- (G / (G - 1)) * (bread %*% crossprod(scores) %*% bread)
     nu <- G - 1
     n <- G

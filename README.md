@@ -60,7 +60,7 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 Residual standard error: 1.065 on 92 degrees of freedom
 Multiple R-squared:  0.9164,	Adjusted R-squared:   0.91
 F-statistic:   144 on 7 and 92 DF,  p-value: < 2.2e-16 
-Anytime-Valid: TRUE
+Anytime-Valid: TRUE (g = 11.31)
 
 
                  2.5 %    97.5 %
@@ -105,7 +105,7 @@ X3:trt       0.08015    0.18154   0.441        1
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 Multiple R-squared:  0.9164,	Adjusted R-squared:   0.91
 F-statistic:  1496 on 7 and 92 DF,  p-value: < 2.2e-16 
-Anytime-Valid: TRUE
+Anytime-Valid: TRUE (g = 11.31)
 Robust Standard Error Type: HC0 
 
 
@@ -134,6 +134,6 @@ Species       2  63.21  31.606   119.3 <2e-16 ***
 Residuals   147  38.96   0.265                   
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-Anytime-Valid: TRUE
+Anytime-Valid: TRUE (g = 1)
 ```
 

@@ -51,13 +51,13 @@ av_fit <- av(fit, g = 1)
 # Print the summary of the anytime-valid model
 summary(av_fit)
 
-# With cluster-robust standard errors, clustering on number of cylinders
-av_fit_cl <- av(fit, g = 1, cluster = ~ cyl)
+# With cluster-robust standard errors, clustering on number of carburetors
+av_fit_cl <- av(fit, g = 1, cluster = ~ carb)
 summary(av_fit_cl)
 
 # Equivalent ways of specifying the clusters
-av_fit_cl <- av(fit, g = 1, cluster = "cyl")
-av_fit_cl <- av(fit, g = 1, cluster = mtcars$cyl)
+av_fit_cl <- av(fit, g = 1, cluster = "carb")
+av_fit_cl <- av(fit, g = 1, cluster = mtcars$carb)
 
 }
 \references{
