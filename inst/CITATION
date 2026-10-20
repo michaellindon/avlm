@@ -1,0 +1,20 @@
+bibentry(
+  bibtype = "Article",
+  title = "Anytime-Valid Inference in Linear Models with Applications to Regression-Adjusted Causal Inference",
+  author = c(person("Michael", "Lindon"), person("Dae Woong", "Ham"),
+             person("Martin", "Tingley"), person("Iavor", "Bojinov")),
+  journal = "Journal of the American Statistical Association",
+  year = "2026",
+  doi = "10.1080/01621459.2026.2692052"
+)
+
+bibentry(
+  bibtype = "Misc",
+  title = "Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences",
+  author = person("Michael", "Lindon"),
+  year = "2026",
+  eprint = "2610.25613",
+  archivePrefix = "arXiv",
+  primaryClass = "stat.ME",
+  url = "https://arxiv.org/abs/2610.25613"
+)
