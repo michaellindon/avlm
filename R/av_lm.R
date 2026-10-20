@@ -4,7 +4,10 @@
 #' \code{g} as an attribute and updating the object's class. The resulting object supports anytime-valid inference.
 #'
 #' @param model An \code{lm} object from a linear model fit.
-#' @param g An integer precision parameter for anytime-valid inference. Default is 1.
+#' @param g A positive precision parameter for the anytime-valid mixture (see Lindon et al., 2026,
+#' Section 4.3.1). It acts like a prior sample size: larger values favour smaller effects and give
+#' narrower intervals at large \eqn{n}, at the cost of wider intervals at small \eqn{n}. Use
+#' \code{\link{optimal_g}} to choose it for a target sample size. Default is 1.
 #' @param vcov_estimator Optional character string specifying the type of heteroskedasticity-robust
 #' standard errors to use. Must be one of \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
 #' If \code{NULL} (default), no robust variance estimation is applied. Cannot be combined with
@@ -50,6 +53,13 @@
 #'
 #' @export
 av.lm <- function(model, g = 1, vcov_estimator = NULL, cluster = NULL, ...) {
+  if (inherits(model, "glm")) {
+    stop("av() supports linear models fit with lm(); objects of class \"glm\" are not supported.")
+  }
+  if (inherits(model, "mlm")) {
+    stop("av() does not yet support multivariate responses (class \"mlm\").")
+  }
+  check_g(g)
   attr(model, "g") <- g
 
   cluster_f <- resolve_cluster_factor(model, cluster)
@@ -86,122 +96,48 @@ av.lm <- function(model, g = 1, vcov_estimator = NULL, cluster = NULL, ...) {
 #' @return A summary object of class \code{summary.avlm} that includes updated p-values for the coefficients.
 #' @export
 summary.avlm <- function(object, ...) {
-  # First get the regular lm summary
   summ <- NextMethod()
-  
-  # Change the class to include summary.avlm first 
   class(summ) <- c("summary.avlm", "summary.lm")
-  
-  # Add any additional elements specific to avlm
+
   g <- attr(object, "g")
-  attr(summ, "g") <- g
-  number_of_coefficients = dim(summ$cov.unscaled)[1]
-  e = residuals(summ)
-  n = length(e)
-  p = number_of_coefficients - 1
-  d = 1
-  nu_classical = n - p - d
+  info <- av_vcov(object)
+  beta <- info$coefficients
+  se <- sqrt(diag(info$vcov))
+  t <- beta / se
 
+  # One coefficient at a time: d = 1 and the remaining k - 1 coefficients are nuisance.
+  # The cluster-robust e-value (Lindon, 2026) has exponent G/2 = (nu + 1)/2, which is the
+  # same as the d = 1 case of the heteroskedasticity-robust one (Lindon et al., 2026).
+  summ$coefficients[names(beta), 2] <- se
+  summ$coefficients[names(beta), 3] <- t
+  summ$coefficients[names(beta), 4] <- p_G_t(log_G_t(t^2, info$nu, info$n, g))
 
-  vcov_estimator = attr(object, "vcov_estimator")
-  cluster_f = attr(object, "cluster")
-
-  if (!is.null(cluster_f)) {
-    # CR1 cluster-robust standard errors. Following Cameron, Gelbach, and
-    # Miller (2011), the anytime-valid reference distribution uses G - 1 (clusters
-    # minus one) as the denominator degrees of freedom, not n - p (observations
-    # minus coefficients).
-    # The sample size in the anytime-valid mixture is G (clusters), so g is on
-    # the cluster scale.
-    vcov_mat <- vcov_CR1(object, cluster_f)
-    G <- attr(vcov_mat, "G")
-    nu <- G - 1
-
-    beta_hat <- object$coefficients
-    se <- sqrt(diag(vcov_mat))
-    t <- as.vector(beta_hat / se)
-    t2 <- t ^ 2
-    log_G_t_values <- log_G_t(t2, nu, G, g)
-    summ$coefficients[, 2] <- se
-    summ$coefficients[, 3] <- t
-    summ$coefficients[, 4] <- p_G_t(log_G_t_values)
-
-    intercept_index <- which(names(beta_hat) == "(Intercept)")
-    if (length(intercept_index) == 1) {
-      beta_sub <- beta_hat[-intercept_index]
-      vcov_sub <- vcov_mat[-intercept_index, -intercept_index, drop = FALSE]
+  # Joint Wald test of every coefficient except the intercept.
+  tested <- names(beta) != "(Intercept)"
+  d <- sum(tested)
+  if (d == 0) {
+    summ$fstatistic <- NULL
+  } else {
+    V <- info$vcov[tested, tested, drop = FALSE]
+    if (is_singular_vcov(V)) {
+      # E = 1 (p-value 1) when the covariance of the tested coefficients is singular,
+      # e.g. when there are no more clusters than tested coefficients.
+      f <- NA_real_
+      log_E <- 0
     } else {
-      beta_sub <- beta_hat
-      vcov_sub <- vcov_mat
+      b <- beta[tested]
+      Q <- as.numeric(crossprod(b, solve(V, b)))
+      f <- Q / d
+      log_E <- if (info$type == "CR1") log_E_CR(Q, d, info$n, g) else log_G_f(f, d, info$nu, info$n, g)
     }
-    d_f <- length(beta_sub)
-    if (is_singular_vcov(vcov_sub)) {
-      # E = 1 (p-value 1) when the cluster-robust covariance of the tested
-      # coefficients is singular, e.g. when G <= d_f.
-      fstatistic <- NA_real_
-      log_E_f <- 0
-    } else {
-      Q <- as.numeric(t(beta_sub) %*% solve(vcov_sub) %*% beta_sub)
-      fstatistic <- Q / d_f
-      log_E_f <- log_E_CR(Q, d_f, G, g)
-    }
-    summ$fstatistic[1] <- fstatistic
-    summ$fstatistic[2] <- d_f
-    summ$fstatistic[3] <- nu
-
-    attr(summ, "vcov_estimator") <- "CR1"
-    attr(summ, "cluster_G") <- G
-    attr(summ, "f_pvalue") <- p_G_f(log_E_f)
-
-  } else if(is.null(vcov_estimator)){
-    t = summ$coefficients[, 't value']
-    t2 = t ^ 2
-    log_G_t_values = log_G_t(t2, nu_classical, n, g)
-    summ$coefficients[,4] = p_G_t(log_G_t_values)
-    attr(summ, "vcov_estimator") = vcov_estimator
-  }else{
-    h <- hatvalues(object)
-    weights <- switch(vcov_estimator,
-                      "HC0" = e^2,
-                      "HC1" = e^2 * (n/(n-number_of_coefficients)),
-                      "HC2" = e^2 / (1-h),
-                      "HC3" = e^2 / (1-h)^2,
-                      stop("Unsupported vcov estimator type")
-    )
-    X <- model.matrix(object)
-    XV_hatX <- crossprod(X,  X * weights)
-    U <- chol(solve(XV_hatX))
-    XX <- crossprod(X)
-    X_star <- U %*% XX
-
-    beta_hat <- object$coefficients
-    asymp_precision = crossprod(X_star)
-    asymp_covariance = solve(asymp_precision)
-    intercept_index <- which(names(beta_hat) == "(Intercept)")
-    if (length(intercept_index) == 1) {
-      beta_hat_no_intercept <- beta_hat[-intercept_index]
-      asymp_covariance_no_intercept <- asymp_covariance[-intercept_index, -intercept_index, drop = FALSE]
-    } else {
-      beta_hat_no_intercept <- beta_hat
-      asymp_covariance_no_intercept <- asymp_covariance
-    }
-    # The Wald statistic inverts the covariance of the tested coefficients, and
-    # the F-statistic form that log_G_f expects is Q / d (Q_n / r in Lindon et al., 2026, JASA)
-    fstatistic = t(beta_hat_no_intercept) %*% solve(asymp_covariance_no_intercept) %*% beta_hat_no_intercept
-    summ$fstatistic[1] = fstatistic / length(beta_hat_no_intercept)
-
-
-    std_errs <- sqrt(diag(asymp_covariance))
-    t<- as.vector(beta_hat / std_errs)
-    t2 = t ^ 2
-    log_G_t_values = log_G_t(t2, nu_classical, n, g)
-    summ$coefficients[,2] = std_errs
-    summ$coefficients[,3] = t
-    summ$coefficients[,4] = p_G_t(log_G_t_values)
-    attr(summ, "vcov_estimator") = vcov_estimator
+    summ$fstatistic <- c(value = f, numdf = d, dendf = info$nu)
+    attr(summ, "f_pvalue") <- p_G_f(log_E)
   }
 
-  return(summ)
+  attr(summ, "g") <- g
+  attr(summ, "vcov_estimator") <- if (info$type == "classical") NULL else info$type
+  attr(summ, "cluster_G") <- info$G
+  summ
 }
 
 
@@ -263,17 +199,10 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
         ",\tAdjusted R-squared:  ", formatC(x$adj.r.squared, digits = digits), 
         "\n", sep = "")
 
-    # Calculate custom p-value for F-statistic
-    g <- attr(x, "g")
     f <- x$fstatistic[1]
-    n = length(x$residuals)
-    d = x$fstatistic[2]
-    nu <- x$fstatistic[3] #n - p - d
+    d <- x$fstatistic[2]
+    nu <- x$fstatistic[3]
     f_spvalue <- attr(x, "f_pvalue")
-    if (is.null(f_spvalue)) {
-      log_G_f_value = log_G_f(f, d, nu, n, g)
-      f_spvalue = p_G_f(log_G_f_value)
-    }
     
     # Print F-statistic with custom p-value
     cat("F-statistic:", formatC(f, digits = digits), 
@@ -281,7 +210,7 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
         format.pval(f_spvalue, digits = digits), "\n")
   }
   
-  cat("Anytime-Valid: TRUE\n")
+  cat("Anytime-Valid: TRUE (g = ", format(attr(x, "g"), digits = digits), ")\n", sep = "")
   if(!is.null(vcov_estimator)){
     cat("Robust Standard Error Type:", vcov_estimator, "\n")
     G <- attr(x, "cluster_G")
@@ -319,55 +248,48 @@ print.summary.avlm <- function(x, digits = max(3L, getOption("digits") - 3L),
 #' 
 #' @export
 confint.avlm <- function(object, parm, level = 0.95, ...) {
-  # Get the standard confidence intervals from lm
-  # We'll use the standard method as a starting point
-  orig_confint <- NextMethod()
-  
-  # Extract needed components for custom CI calculation
+  info <- av_vcov(object)
   coefs <- coef(object)
-  se <- summary(object)$coefficients[, 2]
-  g <- attr(object, "g")  # The avlm-specific parameter
-  n <- length(object$residuals)
-  number_of_coefficients = length(se)
-
-  # Cameron-Gelbach-Miller: for CR1 cluster-robust standard errors, use
-  # G - 1 (clusters minus one) as the denominator degrees of freedom rather
-  # than n - p (observations minus coefficients).
-  # The anytime-valid sample size is likewise G rather than n.
-  cluster_f <- attr(object, "cluster")
-  nu <- n - number_of_coefficients
-  if (!is.null(cluster_f)) {
-    n <- nlevels(cluster_f)
-    nu <- n - 1
-  }
-
-  # Parameter selection (same as in the standard method)
+  pnames <- names(coefs)
   if (missing(parm)) {
-    parm <- names(coefs)
+    parm <- pnames
   } else if (is.numeric(parm)) {
-    parm <- names(coefs)[parm]
+    parm <- pnames[parm]
   }
 
-  # Calculate custom confidence intervals that incorporate g
   alpha <- 1 - level
-  t_rad <- t_radius(g, n, number_of_coefficients, alpha, nu = nu)
+  radius <- t_radius(attr(object, "g"), info$n, alpha = alpha, nu = info$nu)
+  se <- sqrt(diag(info$vcov))
 
-  
-  # Create the CI matrix
-  custom_ci <- matrix(NA, length(parm), 2)
-  rownames(custom_ci) <- parm
-  colnames(custom_ci) <- c(paste(format(100 * alpha/2, digits = 3), "%"), 
-                           paste(format(100 * (1 - alpha/2), digits = 3), "%"))
-  
-  # Fill in the confidence intervals
-  for (i in seq_along(parm)) {
-    param_name <- parm[i]
-    if (param_name %in% names(coefs)) {
-      idx <- which(names(coefs) == param_name)
-      custom_ci[i, 1] <- coefs[idx] - t_rad * se[idx]
-      custom_ci[i, 2] <- coefs[idx] + t_rad * se[idx]
-    }
-  }
-  
-  return(custom_ci)
+  ci <- matrix(NA_real_, length(parm), 2L,
+               dimnames = list(parm, paste(format(100 * c(alpha / 2, 1 - alpha / 2), trim = TRUE,
+                                                 scientific = FALSE, digits = 3), "%")))
+  est <- intersect(parm, names(se))
+  ci[est, 1] <- coefs[est] - radius * se[est]
+  ci[est, 2] <- coefs[est] + radius * se[est]
+  ci
+}
+
+#' Covariance Matrix for Anytime-Valid lm (avlm) Objects
+#'
+#' Returns the covariance matrix used for anytime-valid inference: the classical one, or the
+#' heteroskedasticity-robust or cluster-robust one requested in \code{\link{av.lm}}.
+#'
+#' @param object An \code{avlm} object.
+#' @param complete Logical; if \code{TRUE} (the default), aliased coefficients are included
+#' with \code{NA} rows and columns, as in \code{\link[stats]{vcov}}.
+#' @param ... Unused.
+#'
+#' @return A covariance matrix.
+#' @examples
+#' fit <- av(lm(mpg ~ wt + hp, data = mtcars), cluster = ~ cyl)
+#' vcov(fit)
+#' @export
+vcov.avlm <- function(object, complete = TRUE, ...) {
+  V <- av_vcov(object)$vcov
+  if (!complete) return(V)
+  pnames <- names(coef(object))
+  out <- matrix(NA_real_, length(pnames), length(pnames), dimnames = list(pnames, pnames))
+  out[rownames(V), colnames(V)] <- V
+  out
 }

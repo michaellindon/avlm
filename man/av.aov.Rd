@@ -9,7 +9,7 @@
 \arguments{
 \item{model}{An \code{aov} object resulting from an ANOVA analysis.}
 
-\item{g}{An integer precision parameter for anytime-valid inference. Default is 1.}
+\item{g}{A positive precision parameter for anytime-valid inference (see \code{\link{av.lm}}). Default is 1.}
 
 \item{...}{Additional arguments passed to or from other methods.}
 }

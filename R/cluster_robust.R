@@ -85,52 +85,6 @@ cluster_from_data <- function(model, cluster) {
   values[rows_used]
 }
 
-#' Compute a CR1 Cluster-Robust Covariance Matrix
-#'
-#' Computes the CR1 cluster-robust sandwich covariance matrix for the coefficients of a
-#' fitted \code{lm} object: the sandwich estimator of Liang and Zeger (1986) scaled by the
-#' finite-sample factor \eqn{G/(G-1)} (Cameron and Miller, 2015), where \eqn{G} is the
-#' number of clusters. Unlike the Stata/fixest default, it omits the additional
-#' \eqn{(n-1)/(n-k)} factor, so that under a common within-cluster design it equals the
-#' sample covariance of the per-cluster OLS estimates divided by \eqn{G}. This is the
-#' CR1 estimator of Lindon (2026), eq. (CR1).
-#'
-#' @references
-#' Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613. \url{https://arxiv.org/abs/2610.25613}
-#'
-#' @param model A fitted \code{lm} object.
-#' @param cluster_f A factor identifying the cluster membership of each observation used in the fit,
-#' as returned by \code{\link{resolve_cluster_factor}}.
-#'
-#' @return The cluster-robust covariance matrix, with the number of clusters attached as
-#' attribute \code{"G"}.
-#' @keywords internal
-vcov_CR1 <- function(model, cluster_f) {
-  X <- model.matrix(model)
-  e <- residuals(model)
-  n <- nrow(X)
-  k <- ncol(X)
-  G <- nlevels(cluster_f)
-
-  if (G >= n) {
-    stop("Number of clusters must be less than the number of observations.")
-  }
-
-  bread <- solve(crossprod(X))
-  Xe <- X * e
-  meat <- matrix(0, k, k)
-  for (lvl in levels(cluster_f)) {
-    idx <- which(cluster_f == lvl)
-    Xeg <- colSums(Xe[idx, , drop = FALSE])
-    meat <- meat + tcrossprod(Xeg)
-  }
-
-  vcov <- (G / (G - 1)) * (bread %*% meat %*% bread)
-  dimnames(vcov) <- list(colnames(X), colnames(X))
-  attr(vcov, "G") <- G
-  vcov
-}
-
 #' Log Cluster-Robust e-Value for a Joint Wald Test
 #'
 #' The cluster-robust e-process of Lindon (2026), eq. (ECR), with \eqn{\nu = G - 1} and exponent

@@ -14,17 +14,13 @@ manual_vcov_CR1 <- function(fit, cluster) {
   (G / (G - 1)) * (bread %*% meat %*% bread)
 }
 
-test_that("vcov_CR1 matches a manual sandwich computation", {
+test_that("the CR1 covariance matches a manual sandwich computation", {
   fit <- lm(mpg ~ wt + hp, data = mtcars)
-  cluster_f <- resolve_cluster_factor(fit, mtcars$cyl)
+  av_fit <- av(fit, cluster = mtcars$cyl)
 
-  computed <- vcov_CR1(fit, cluster_f)
   expected <- manual_vcov_CR1(fit, mtcars$cyl)
-
-  G <- attr(computed, "G")
-  attr(computed, "G") <- NULL
-  expect_equal(unname(computed), unname(expected), tolerance = 1e-10)
-  expect_equal(G, length(unique(mtcars$cyl)))
+  expect_equal(unname(vcov(av_fit)), unname(expected), tolerance = 1e-10)
+  expect_equal(av_vcov(av_fit)$G, length(unique(mtcars$cyl)))
 })
 
 test_that("av.lm with cluster produces cluster-robust standard errors and dfd = G - 1", {
@@ -55,7 +51,7 @@ test_that("clustered anytime-valid confidence intervals use dfd = G - 1 and samp
   se <- summary(av_fit)$coefficients[, 2]
 
   ci <- confint(av_fit, level = 0.95)
-  t_rad <- t_radius(1, G, length(se), 0.05, nu = G - 1)
+  t_rad <- t_radius(1, G, 0.05, nu = G - 1)
 
   expected_lo <- coef(fit) - t_rad * se
   expected_hi <- coef(fit) + t_rad * se

@@ -9,7 +9,7 @@ av(model, g = 1, ...)
 \arguments{
 \item{model}{A fitted model object (e.g., an object of class \code{aov} or \code{lm}).}
 
-\item{g}{An integer precision parameter for anytime-valid inference. Defaults to 1.}
+\item{g}{A positive precision parameter for anytime-valid inference (see \code{\link{av.lm}}). Defaults to 1.}
 
 \item{...}{Additional arguments passed to the method.}
 }

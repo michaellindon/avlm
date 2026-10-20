@@ -1,74 +1,64 @@
-t_radius<- function(g, n, number_of_coefficients, alpha, nu = n - number_of_coefficients) {
-  d = 1
-  # Compute T = g/(g+n)
-  T <- g / (g + n)
-  
-  # Calculate the powered term (T * alpha^2)^(1/(nu+1))
-  powered_term <- (T * alpha^2)^(1/(nu+d))
-  
-  # Compute the numerator and denominator of f(g)
-  numerator <- nu * (1 - powered_term)
-  denominator <- max(0, powered_term - T)
-  
-  return (sqrt(numerator / denominator))
+#' Computes the value of g such that width of the \eqn{1-\alpha} confidence interval
+#' at sample size n is minimized
+#'
+#' Minimizes the radius \eqn{R(g, n, 1, \alpha)} of the asymptotic t confidence sequence (Lindon et al., 2026, Section 5.1) over \eqn{g}.
+#'
+#' @param n A positive sample size integer. For cluster-robust inference, the number of clusters.
+#' @param number_of_coefficients A positive integer of coefficients in the full model
+#' @param alpha A positive numeric scalar in (0,1) for nominal Type I error.
+#' @param nu Denominator degrees of freedom. Defaults to \code{n - number_of_coefficients};
+#' for cluster-robust inference (\code{av(..., cluster = )}) use \code{nu = n - 1} with
+#' \code{n} the number of clusters.
+#'
+#' @return A positive numeric scalar representing the optimal \eqn{g} that minimizes the CI width.
+#'
+#' @examples
+#' n <- 10000
+#' alpha <- 0.05
+#' g_star <- optimal_g(n, 5, alpha)
+#' cat("The optimal g is:", g_star, "\n")
+#'
+#' # cluster-robust inference with 200 clusters
+#' optimal_g(200, alpha = 0.05, nu = 199)
+#'
+#' @export
+optimal_g <- function(n, number_of_coefficients, alpha, nu = n - number_of_coefficients) {
+  if (n <= 0) stop("n must be positive.")
+  if (nu <= 0) stop("n must be greater than number_of_coefficients")
+  if (alpha <= 0 || alpha >= 1) stop("alpha must be in (0,1).")
+
+  # The radius is finite iff g / (g + n) < alpha^(2 / nu).
+  upper_bound <- n * alpha^(2 / nu) / (1 - alpha^(2 / nu))
+  # Optimize over log(g): the optimum can be far below 1 for small n.
+  opt <- optimize(function(log_g) t_radius(exp(log_g), n, alpha, nu),
+                  interval = c(log(upper_bound) - 30, log(upper_bound)))
+  exp(opt$minimum)
 }
 
-z_radius <- function(g, n, alpha){
-  return (sqrt( ((g + n) / n) * log((g + n) / (g * alpha^2))))
-}
-
-log_G_t = function(t2, nu, n, g){
+# Radius R(g, n, 1, alpha)^(1/2) of the t confidence sequence on the t scale
+# (Lindon et al., 2026, Section 5.1; Lindon, 2026, eq. kappa with q = 1).
+t_radius <- function(g, n, alpha, nu) {
   r <- g / (g + n)
-  0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
+  u <- (r * alpha^2)^(1 / (nu + 1))
+  sqrt(nu * (1 - u) / max(0, u - r))
 }
 
-p_G_t = function(log_G_t_values){
-  return(pmin(1.0, exp(-log_G_t_values)))
-}
-
-log_G_f = function(f, d, nu, n, g){
+# log e-value for a single coefficient (d = 1), with the g-prior Phi = (g / n) Z'Z.
+log_G_t <- function(t2, nu, n, g) {
   r <- g / (g + n)
-  0.5 * d * log(r) + (0.5 * (nu+d)) * (log(1 + (d / nu) * f) - log(1 + r * (d / nu) * f  ))
+  0.5 * log(r) + 0.5 * (nu + 1) * (log1p(t2 / nu) - log1p(r * t2 / nu))
 }
 
-p_G_f = function(log_G_f_values){
-  return(pmin(1.0, exp(-log_G_f_values)))
+p_G_t <- function(log_G_t_values) {
+  pmin(1, exp(-log_G_t_values))
 }
 
-p_t = function(t2, nu, phi, z2){
-  pmin(1, exp(-1 * log_E_t(t2, nu, phi, z2)))
+# log e-value for a d-dimensional F-test with the g-prior (Lindon et al., 2026, Sections 4.3.1 and 5).
+log_G_f <- function(f, d, nu, n, g) {
+  r <- g / (g + n)
+  0.5 * d * log(r) + 0.5 * (nu + d) * (log1p((d / nu) * f) - log1p(r * (d / nu) * f))
 }
 
-
-log_E_t = function(t2, nu, phi, z2){
-  r <- phi / (phi + z2)
-  0.5*log(r) + (0.5 * (nu+1)) * (log(1 + t2 / nu) - log(1 + r * t2 / nu  ))
-}
-
-p_t = function(t2, nu, phi, z2){
-  pmin(1, exp(-1 * log_E_t(t2, nu, phi, z2)))
-}
-
-log_E_f = function(delta, n, p, d, Phi, ZtZ, s2){
-  normalizing_constant =  if(d > 1) 0.5*log(det(Phi)) - 0.5*log(det(Phi+ZtZ)) else 0.5*log(Phi) - 0.5*log(Phi+ZtZ)
-  sol = if(d>1) solve(ZtZ + Phi, ZtZ) else ZtZ / (ZtZ+Phi)
-  return (normalizing_constant +
-        (0.5*(n-p))*(
-          log(1+t(delta) %*% ZtZ %*% delta / (s2 * (n-p-d))) - 
-          log(1+t(delta) %*% (ZtZ - ZtZ %*% sol) %*% delta / (s2 * (n-p-d)))))
-}
-
-p_F = function(lmfit, phi, s2) {
-  W = model.matrix(lmfit)
-  p = 1
-  n = dim(W)[1]
-  d = dim(W)[2] - 1
-  Z = W[, 2:(d + p)]
-  Y = lmfit$residuals + lmfit$fitted.values
-  delta = lmfit$coefficients[2:(d + p)]
-  ZtZ = MPxM(Z,W) - MP1M(Z)
-  Phi = diag(d) * phi
-  return (min(1, exp(
-    -1 * log_E_f(delta, n, p, d, Phi, ZtZ, s2)
-  )))
+p_G_f <- function(log_G_f_values) {
+  pmin(1, exp(-log_G_f_values))
 }
