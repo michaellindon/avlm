@@ -7,13 +7,33 @@
 #' @param g A positive precision parameter for anytime-valid inference (see \code{\link{av.lm}}). Default is 1.
 #' @param ... Additional arguments passed to or from other methods.
 #'
-#' @return An object of class \code{avaov} with anytime-valid p-values.
+#' @details The ANOVA table uses sequential (Type I) sums of squares, as \code{\link[stats]{summary.aov}}
+#' does, so in unbalanced designs each term is tested given the terms listed before it and the
+#' p-values depend on the order of the terms. Each row is the anytime-valid version of that
+#' sequential F-test. The object also inherits from \code{avlm}, so \code{\link{confint}} and
+#' \code{\link{vcov}} give anytime-valid intervals for the coefficients.
+#'
+#' @return An object of class \code{avaov} (inheriting from \code{avlm}) with anytime-valid p-values.
 #' @export
 av.aov <- function(model, g = 1, ...) {
+  if (inherits(model, "mlm")) {
+    stop("av() does not yet support multivariate responses (class \"maov\").")
+  }
   check_g(g)
   attr(model, "g") <- g
-  class(model) <- c("avaov", class(model))
+  class(model) <- c("avaov", "avlm", class(model))
   return(model)
+}
+
+# Replace the Pr(>F) column of an ANOVA table (one row per term plus a residual row) with
+# anytime-valid p-values; the residual row has no F value and stays NA.
+av_anova_pvalues <- function(tab, nu, n, g) {
+  f <- tab$`F value`
+  is_term <- !is.na(f)
+  p <- rep(NA_real_, nrow(tab))
+  p[is_term] <- p_G_f(log_G_f(f[is_term], tab$Df[is_term], nu, n, g))
+  tab$`Pr(>F)` <- p
+  tab
 }
 
 
@@ -43,24 +63,40 @@ av.aov <- function(model, g = 1, ...) {
 #' 
 #' @export
 summary.avaov <- function(object, ...) {
-  summ <- NextMethod()
+  # Not NextMethod(): the next class is avlm, whose summary is not an ANOVA table.
+  summ <- summary.aov(object, ...)
   class(summ) <- c("summary.avaov", class(summ))
   g <- attr(object, "g")
   attr(summ, "g") <- g
 
   nu <- object$df.residual
   n <- nu + object$rank
-  # summary.aov returns a list holding one ANOVA table; each term's F-test is replaced by
-  # its anytime-valid counterpart (the residual row has no F value and stays NA).
-  summ[] <- lapply(summ, function(tab) {
-    f <- tab$`F value`
-    is_term <- !is.na(f)
-    p <- rep(NA_real_, nrow(tab))
-    p[is_term] <- p_G_f(log_G_f(f[is_term], tab$Df[is_term], nu, n, g))
-    tab$`Pr(>F)` <- p
-    tab
-  })
+  # summary.aov returns a list holding one ANOVA table.
+  summ[] <- lapply(summ, av_anova_pvalues, nu = nu, n = n, g = g)
   summ
+}
+
+#' Anytime-Valid ANOVA Table for an avlm Object
+#'
+#' Computes the sequential (Type I) ANOVA table of \code{\link[stats]{anova.lm}} and replaces
+#' its p-values with anytime-valid ones, using the same e-values as \code{\link{summary.avaov}}.
+#' Comparing several models (\code{anova(fit1, fit2)}) is not supported.
+#'
+#' @param object An \code{avlm} object.
+#' @param ... Must be empty.
+#'
+#' @return An \code{anova} table with anytime-valid p-values.
+#' @examples
+#' anova(av(lm(mpg ~ wt + hp, data = mtcars), g = 1))
+#' @export
+anova.avlm <- function(object, ...) {
+  if (...length() > 0) {
+    stop("anova() on an avlm object takes a single model.")
+  }
+  tab <- NextMethod()
+  attr(tab, "heading") <- c(attr(tab, "heading"),
+                            paste0("Anytime-valid p-values (g = ", format(attr(object, "g")), ")\n"))
+  av_anova_pvalues(tab, object$df.residual, object$df.residual + object$rank, attr(object, "g"))
 }
 
 #' Print Method for summary.avaov Objects
@@ -85,7 +121,7 @@ print.summary.avaov <- function(x, digits = max(3L, getOption("digits") - 3L),
   
   output <- gsub("Pr\\(>F\\)", "p value", output)
   cat(paste(output, collapse = "\n"))
-  cat("\nAnytime-Valid: TRUE\n")
+  cat("\nAnytime-Valid: TRUE (g = ", format(attr(x, "g"), digits = digits), ")\n", sep = "")
 
   invisible(x)
 }

@@ -14,9 +14,16 @@
 \item{...}{Additional arguments passed to or from other methods.}
 }
 \value{
-An object of class \code{avaov} with anytime-valid p-values.
+An object of class \code{avaov} (inheriting from \code{avlm}) with anytime-valid p-values.
 }
 \description{
 Converts an object of class \code{aov} to an anytime-valid version by setting the
 precision parameter \code{g} as an attribute and updating the class.
+}
+\details{
+The ANOVA table uses sequential (Type I) sums of squares, as \code{\link[stats]{summary.aov}}
+does, so in unbalanced designs each term is tested given the terms listed before it and the
+p-values depend on the order of the terms. Each row is the anytime-valid version of that
+sequential F-test. The object also inherits from \code{avlm}, so \code{\link{confint}} and
+\code{\link{vcov}} give anytime-valid intervals for the coefficients.
 }

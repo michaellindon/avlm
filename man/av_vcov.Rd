@@ -4,10 +4,12 @@
 \alias{av_vcov}
 \title{Coefficient Covariance and Degrees of Freedom for Anytime-Valid Inference}
 \usage{
-av_vcov(object)
+av_vcov(object, summ = NULL)
 }
 \arguments{
 \item{object}{An \code{avlm} object.}
+
+\item{summ}{Optionally, \code{summary.lm(object)}, to avoid computing it twice.}
 }
 \value{
 A list with elements \code{coefficients} (non-aliased estimates), \code{vcov},

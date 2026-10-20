@@ -22,6 +22,6 @@ Returns the covariance matrix used for anytime-valid inference: the classical on
 heteroskedasticity-robust or cluster-robust one requested in \code{\link{av.lm}}.
 }
 \examples{
-fit <- av(lm(mpg ~ wt + hp, data = mtcars), cluster = ~ cyl)
+fit <- av(lm(mpg ~ wt + hp, data = mtcars), cluster = ~ carb)
 vcov(fit)
 }

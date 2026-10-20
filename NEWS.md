@@ -1,3 +1,20 @@
+# avlm (development version)
+
+## Bug Fixes
+
+- `confint()` and `vcov()` on an `avaov` object returned the fixed-sample intervals and
+  covariance; `avaov` objects now also inherit from `avlm`, so both are anytime-valid.
+- `av()` rejects multivariate `aov` fits (class `maov`) instead of printing per-response tables
+  that `confint()` could not use.
+
+## New Features
+
+- `anova()` on an `avlm` object returns the sequential ANOVA table with anytime-valid
+  p-values; previously it silently returned the classical table.
+- A warning is given when there are no more clusters than coefficients, since the cluster-robust
+  covariance is then singular.
+- `confint()` validates `level`; the `avaov` summary prints `g`.
+
 # avlm 0.2.0
 
 ## New Features
