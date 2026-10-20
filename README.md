@@ -1,4 +1,12 @@
 # avlm
+
+<!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/avlm)](https://CRAN.R-project.org/package=avlm)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/avlm)](https://cran.r-project.org/package=avlm)
+[![R-CMD-check](https://github.com/michaellindon/avlm/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/michaellindon/avlm/actions/workflows/R-CMD-check.yaml)
+[![JASA](https://img.shields.io/badge/JASA-10.1080%2F01621459.2026.2692052-blue)](https://doi.org/10.1080/01621459.2026.2692052)
+[![arXiv](https://img.shields.io/badge/arXiv-2610.25613-b31b1b)](https://arxiv.org/abs/2610.25613)
+<!-- badges: end -->
 Anytime-Valid replacements for base R's lm and aov functions (with additional robust standard error functionality).
 
 
