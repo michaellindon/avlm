@@ -12,26 +12,23 @@ vignette: >
 
 
 
-Conjoint experiments show each respondent several randomly generated profiles and ask
-them to choose between them. The usual estimand is the **average marginal component
-effect (AMCE)**: the change in the probability that a profile is chosen when one attribute
-moves from its baseline level to another level. Under randomization, AMCEs are the
-coefficients of a linear probability model. Each respondent answers several tasks, so
-standard errors are clustered by respondent.
+Conjoint experiments show each respondent several randomly generated profiles and ask them
+to choose between them. The quantities of interest are **average marginal component effects
+(AMCEs)**, estimated as the coefficients of a linear probability model with standard errors
+clustered by respondent.
 
-Conjoint surveys are fielded in waves and watched as responses arrive. Re-checking
-ordinary clustered p-values at every look inflates the false positive rate. `avlm` gives
-the same regression with **cluster-robust confidence sequences and anytime-valid
-p-values** (Lindon, 2026). You can look after every respondent and stop as soon as the
-answer is clear. Anytime-valid inference for conjoint experiments is developed in
-Molitor, Gosciak and Lindon (2026).
+Conjoint surveys are fielded over days or weeks, and it is natural to watch the estimates as
+responses arrive. Classical confidence intervals and p-values are only valid at a single,
+pre-planned sample size. `avlm` turns the same regression into **cluster-robust confidence
+sequences and anytime-valid p-values** (Lindon, 2026; Molitor, Gosciak and Lindon, 2026). They
+stay valid however often you look, so an effect can be declared as soon as the data show it.
 
-## The data
+## The data and the usual fit
 
-Bansak, Hainmueller and Hangartner (2016) asked 18,000 Europeans in 15 countries to choose
-between pairs of hypothetical asylum seekers, five pairs each. Each profile varied nine
-attributes. Here we use three of them: occupation, religion and the reason for migrating.
-The data are in the [Item Response Warehouse](https://itemresponsewarehouse.org/conjoint_standard.html):
+Bansak, Hainmueller and Hangartner (2016) asked 18,000 Europeans to choose between pairs of
+hypothetical asylum seekers, five pairs each. The data are in the
+[Item Response Warehouse](https://itemresponsewarehouse.org/conjoint_standard.html), and this
+is the standard analysis of three of the attributes:
 
 
 ```r
@@ -40,73 +37,15 @@ d <- irw_fetch("bansak_2016_asylum", source = "conj")
 d$attr_occupation <- relevel(factor(d$attr_occupation), "Unemployed")
 d$attr_religion   <- relevel(factor(d$attr_religion), "Christian")
 d$attr_reason     <- relevel(factor(d$attr_reason), "Persecution for political views")
-```
 
-Each respondent contributes ten rows, one per profile, and `choice` records which profile of
-each pair they picked:
-
-
-```r
-r1 <- d[d$id == 1, c("task", "profile", "choice", "attr_occupation", "attr_religion",
-                     "attr_reason", "cov_survey_weight")]
-r1[order(r1$task, r1$profile), ]
-#>       task profile choice attr_occupation attr_religion
-#> 80663    1       1      0          Farmer        Muslim
-#> 80666    1       2      1         Teacher      Agnostic
-#> 80665    2       1      0         Teacher     Christian
-#> 80669    2       2      1         Cleaner        Muslim
-#> 80667    3       1      0      Accountant        Muslim
-#> 80670    3       2      1          Farmer        Muslim
-#> 80662    4       1      0      Accountant        Muslim
-#> 80668    4       2      1          Farmer        Muslim
-#> 80664    5       1      0         Teacher      Agnostic
-#> 80661    5       2      1      Accountant        Muslim
-#>                                 attr_reason cov_survey_weight
-#> 80663     Persecution for religious beliefs           0.64916
-#> 80666             Persecution for ethnicity           0.64916
-#> 80665 Seeking better economic opportunities           0.64916
-#> 80669       Persecution for political views           0.64916
-#> 80667 Seeking better economic opportunities           0.64916
-#> 80670             Persecution for ethnicity           0.64916
-#> 80662             Persecution for ethnicity           0.64916
-#> 80668 Seeking better economic opportunities           0.64916
-#> 80664 Seeking better economic opportunities           0.64916
-#> 80661       Persecution for political views           0.64916
-```
-
-## The standard analysis, and the avlm version
-
-The usual analysis is a weighted linear probability model with standard errors clustered
-by respondent:
-
-
-```r
-library(sandwich)
 fit <- lm(choice ~ attr_occupation + attr_religion + attr_reason, data = d,
           weights = pmin(cov_survey_weight, 6))
-se <- sqrt(diag(vcovCL(fit, cluster = ~id)))
-round(cbind(AMCE = coef(fit), SE = se), 3)
-#>                                                    AMCE    SE
-#> (Intercept)                                       0.514 0.005
-#> attr_occupationAccountant                         0.079 0.005
-#> attr_occupationCleaner                            0.047 0.005
-#> attr_occupationDoctor                             0.133 0.005
-#> attr_occupationFarmer                             0.056 0.005
-#> attr_occupationTeacher                            0.092 0.005
-#> attr_religionAgnostic                            -0.036 0.004
-#> attr_religionMuslim                              -0.107 0.004
-#> attr_reasonPersecution for ethnicity              0.009 0.004
-#> attr_reasonPersecution for religious beliefs      0.006 0.004
-#> attr_reasonSeeking better economic opportunities -0.151 0.004
 ```
 
-These match the published estimates. Muslim applicants are about 11 points less likely to
-be chosen than Christian ones, and economic migrants about 15 points less likely than people
-fleeing political persecution.
+## Making it anytime-valid
 
-
-
-The anytime-valid version uses the same fit and the same cluster formula:
+One line converts the fit. The respondent clusters are given the same way as in
+`sandwich::vcovCL()`:
 
 
 ```r
@@ -119,118 +58,60 @@ summary(afit)
 #>     data = d, weights = pmin(cov_survey_weight, 6))
 #> 
 #> Residuals:
-#>      Min       1Q   Median       3Q      Max 
-#> -1.60782 -0.41702  0.02155  0.41226  1.82135 
+#>     Min      1Q  Median      3Q     Max 
+#> -1.6078 -0.4170  0.0216  0.4123  1.8214 
 #> 
 #> Coefficients:
-#>                                                   Estimate Std. Error t value
-#> (Intercept)                                       0.514387   0.004917 104.620
-#> attr_occupationAccountant                         0.078643   0.005329  14.756
-#> attr_occupationCleaner                            0.046982   0.005394   8.710
-#> attr_occupationDoctor                             0.133200   0.005384  24.742
-#> attr_occupationFarmer                             0.056495   0.005276  10.707
-#> attr_occupationTeacher                            0.091710   0.005314  17.259
-#> attr_religionAgnostic                            -0.035949   0.003755  -9.573
-#> attr_religionMuslim                              -0.107233   0.003893 -27.546
-#> attr_reasonPersecution for ethnicity              0.008802   0.004361   2.018
-#> attr_reasonPersecution for religious beliefs      0.005524   0.004371   1.264
-#> attr_reasonSeeking better economic opportunities -0.150718   0.004428 -34.041
-#>                                                  p value    
-#> (Intercept)                                       < 2e-16 ***
-#> attr_occupationAccountant                         < 2e-16 ***
-#> attr_occupationCleaner                           6.91e-15 ***
-#> attr_occupationDoctor                             < 2e-16 ***
-#> attr_occupationFarmer                             < 2e-16 ***
-#> attr_occupationTeacher                            < 2e-16 ***
-#> attr_religionAgnostic                             < 2e-16 ***
-#> attr_religionMuslim                               < 2e-16 ***
-#> attr_reasonPersecution for ethnicity                0.493    
-#> attr_reasonPersecution for religious beliefs        1.000    
-#> attr_reasonSeeking better economic opportunities  < 2e-16 ***
-#> ---
-#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#>                                                  Estimate Std. Error t value p value
+#> (Intercept)                                       0.51439    0.00492  104.62  < 2e-16
+#> attr_occupationAccountant                         0.07864    0.00533   14.76  < 2e-16
+#> attr_occupationCleaner                            0.04698    0.00539    8.71  6.9e-15
+#> attr_occupationDoctor                             0.13320    0.00538   24.74  < 2e-16
+#> attr_occupationFarmer                             0.05650    0.00528   10.71  < 2e-16
+#> attr_occupationTeacher                            0.09171    0.00531   17.26  < 2e-16
+#> attr_religionAgnostic                            -0.03595    0.00376   -9.57  < 2e-16
+#> attr_religionMuslim                              -0.10723    0.00389  -27.55  < 2e-16
+#> attr_reasonPersecution for ethnicity              0.00880    0.00436    2.02     0.49
+#> attr_reasonPersecution for religious beliefs      0.00552    0.00437    1.26     1.00
+#> attr_reasonSeeking better economic opportunities -0.15072    0.00443  -34.04  < 2e-16
 #>  (1470 observations deleted due to missingness)
-#> Multiple R-squared:  0.03302,	Adjusted R-squared:  0.03297
-#> F-statistic: 353.4 on 10 and 17873 DF,  p-value: < 2.2e-16 
+#> Multiple R-squared:  0.033,	Adjusted R-squared:  0.033
+#> F-statistic:  353 on 10 and 17873 DF,  p-value: <2e-16 
 #> Anytime-Valid: TRUE (g = 2191)
 #> Robust Standard Error Type: CR1 
 #> Clusters: 17874
 ```
 
-`summary()` keeps the `lm` layout. It reports CR1 cluster-robust standard errors, the number
-of clusters, and anytime-valid p-values. The 147 respondents with a missing survey weight are
-dropped by `lm()`, and `av()` drops their clusters too. The standard errors match
-`vcovCL(fit, cluster = ~id, type = "HC0")` exactly:
-
-
-```r
-all.equal(sqrt(diag(vcov(afit))), sqrt(diag(vcovCL(fit, cluster = ~id, type = "HC0"))))
-#> [1] TRUE
-```
-
-`confint()` gives the 95% confidence sequences. Here they are next to the Wald intervals:
-
-
-```r
-ci <- confint(afit)
-tab <- data.frame(
-  term = names(coef(fit))[-1],
-  amce = coef(fit)[-1],
-  wald_lo = (coef(fit) - qnorm(0.975) * se)[-1],
-  wald_hi = (coef(fit) + qnorm(0.975) * se)[-1],
-  av_lo = ci[-1, 1],
-  av_hi = ci[-1, 2],
-  av_p = coef(summary(afit))[-1, 4]
-)
-format(tab[, -1], digits = 2)
-#>                                                     amce  wald_lo wald_hi
-#> attr_occupationAccountant                         0.0786  0.06820   0.089
-#> attr_occupationCleaner                            0.0470  0.03641   0.058
-#> attr_occupationDoctor                             0.1332  0.12265   0.144
-#> attr_occupationFarmer                             0.0565  0.04615   0.067
-#> attr_occupationTeacher                            0.0917  0.08129   0.102
-#> attr_religionAgnostic                            -0.0359 -0.04331  -0.029
-#> attr_religionMuslim                              -0.1072 -0.11486  -0.100
-#> attr_reasonPersecution for ethnicity              0.0088  0.00025   0.017
-#> attr_reasonPersecution for religious beliefs      0.0055 -0.00304   0.014
-#> attr_reasonSeeking better economic opportunities -0.1507 -0.15940  -0.142
-#>                                                    av_lo  av_hi     av_p
-#> attr_occupationAccountant                         0.0625  0.095  4.4e-42
-#> attr_occupationCleaner                            0.0306  0.063  6.9e-15
-#> attr_occupationDoctor                             0.1169  0.150 1.8e-116
-#> attr_occupationFarmer                             0.0405  0.073  2.4e-22
-#> attr_occupationTeacher                            0.0756  0.108  2.4e-57
-#> attr_religionAgnostic                            -0.0473 -0.025  6.3e-18
-#> attr_religionMuslim                              -0.1190 -0.095 1.1e-143
-#> attr_reasonPersecution for ethnicity             -0.0044  0.022  4.9e-01
-#> attr_reasonPersecution for religious beliefs     -0.0077  0.019  1.0e+00
-#> attr_reasonSeeking better economic opportunities -0.1642 -0.137 1.1e-216
-```
+`summary()` returns the familiar regression table. The standard errors are CR1
+cluster-robust, and the p-values are anytime-valid. Muslim applicants are about 11 points less
+likely to be chosen than Christian ones, and economic migrants about 15 points less likely than
+people fleeing political persecution. Both effects are overwhelming even under anytime-valid
+inference. `confint(afit)` gives the matching 95% confidence sequences.
 
 
 
-The anytime-valid intervals are wider than the Wald intervals. That width is what it costs
-to be allowed to look at the data at any time:
+
+
+## Confidence intervals and confidence sequences
+
+A confidence sequence is a little wider than the classical interval computed on the same data.
+That extra width is the price of being allowed to look at the data at any time:
 
 <div class="figure">
 <img src="conjoint-coefplot-1.png" alt="AMCE estimates with 95% Wald intervals and wider 95% anytime-valid confidence sequences, grouped by attribute." width="100%" />
-<p class="caption">plot of chunk coefplot</p>
 </div>
 
-## Watching the survey come in
+## Detecting effects in flight
 
-Suppose the survey had been analysed while it was fielded, re-running the regression after
-every 250 respondents. The data do not record the order in which people responded, so we
-replay the respondents in a random order. The confidence sequences are valid
-**simultaneously at every look**, so we can stop as soon as an AMCE is clearly different
-from zero. With Wald intervals that is not allowed, as the next section shows.
+Now suppose the survey had been analysed while it was fielded, re-running the regression after
+every 250 respondents. The data do not record the order in which people responded, so we replay
+the respondents in a random order:
 
 
 ```r
 set.seed(2016)
 arrival <- sample(unique(d$id))
 d$arrival <- match(d$id, arrival)
-
 looks <- seq(250, length(arrival), by = 250)
 terms <- c("attr_reasonSeeking better economic opportunities", "attr_religionMuslim",
            "attr_religionAgnostic", "attr_reasonPersecution for ethnicity")
@@ -238,85 +119,30 @@ terms <- c("attr_reasonSeeking better economic opportunities", "attr_religionMus
 path <- do.call(rbind, lapply(looks, function(n_resp) {
   fit_n <- lm(choice ~ attr_occupation + attr_religion + attr_reason,
               data = d[d$arrival <= n_resp, ], weights = pmin(cov_survey_weight, 6))
-  ci_n <- confint(av(fit_n, g = 2191, cluster = ~id), parm = terms)
-  se_n <- sqrt(diag(vcovCL(fit_n, cluster = ~id)))[terms]
+  cs <- confint(av(fit_n, g = 2191, cluster = ~id), parm = terms)
   data.frame(respondents = n_resp, term = terms, est = coef(fit_n)[terms],
-             av_lo = ci_n[, 1], av_hi = ci_n[, 2],
-             wald_lo = coef(fit_n)[terms] - qnorm(0.975) * se_n,
-             wald_hi = coef(fit_n)[terms] + qnorm(0.975) * se_n)
+             av_lo = cs[, 1], av_hi = cs[, 2])
 }))
-
-# first look at which each confidence sequence excludes zero
-settled_at <- sapply(split(path, path$term), function(p) {
-  p$respondents[which(p$av_hi < 0 | p$av_lo > 0)[1]]
-})
-settled_at[terms]
-#> attr_reasonSeeking better economic opportunities 
-#>                                              500 
-#>                              attr_religionMuslim 
-#>                                              750 
-#>                            attr_religionAgnostic 
-#>                                             2750 
-#>             attr_reasonPersecution for ethnicity 
-#>                                               NA
 ```
+
+
+
+Because the confidence sequences hold **simultaneously at every look**, an effect can be
+declared the first time its sequence excludes zero, with no penalty for having looked before.
 
 <div class="figure">
 <img src="conjoint-monitor-plot-1.png" alt="Confidence sequences for four AMCEs narrowing as respondents arrive, with the point where each first excludes zero marked." width="100%" />
-<p class="caption">plot of chunk monitor-plot</p>
 </div>
 
-The penalty for economic migrants and the penalty for Muslim applicants are settled with a
-small fraction of the 18,000 respondents. The Agnostic penalty takes longer. The difference
-between ethnic and political persecution is close to zero and is never declared different
-from zero, however long you watch.
-
-## Why not just peek at the clustered Wald p-values?
-
-To see what goes wrong, add a **placebo attribute** to the real data: a random label,
-"A" or "B", given to each profile independently of everything else. Its true AMCE is zero by
-construction, and the real respondents' choices keep their real within-respondent
-correlation. We look after every 100 respondents up to 2,000 and record when each test first
-rejects at the 5% level:
-
-
-```r
-set.seed(1)
-reps <- 500
-looks_null <- seq(100, 2000, by = 100)
-
-rejected <- replicate(reps, {
-  first <- sample(unique(d$id), 2000)
-  d0 <- d[d$id %in% first, ]
-  d0$arrival <- match(d0$id, first)
-  d0$placebo <- factor(sample(c("A", "B"), nrow(d0), replace = TRUE))
-  sapply(looks_null, function(n_resp) {
-    fit0 <- lm(choice ~ placebo, data = d0[d0$arrival <= n_resp, ],
-               weights = pmin(cov_survey_weight, 6))
-    afit0 <- av(fit0, g = 2191, cluster = ~id)
-    z <- coef(fit0)[["placeboB"]] / sqrt(vcov(afit0)["placeboB", "placeboB"])
-    c(wald = 2 * pnorm(-abs(z)) < 0.05,
-      avlm = coef(summary(afit0))["placeboB", 4] < 0.05)
-  })
-})
-# rejected[test, look, rep]; has a test rejected at this look or any earlier one?
-ever <- apply(rejected, c(1, 3), cummax)
-false_positive_rate <- apply(ever, c(1, 2), mean)
-false_positive_rate[nrow(false_positive_rate), ]
-#>  wald  avlm 
-#> 0.236 0.000
-```
-
-Checking the clustered Wald test 20 times gives a false positive rate several times the
-promised 5%. The anytime-valid test stays below 5% however often you look.
-
-## Notes
-
-* `av(fit, cluster = ~id)` takes a one-sided formula, a column name (`"id"`), or a vector of
-  ids. Weights, `subset` and missing values are handled the same way as in `lm()`.
-* The cluster-robust e-values and confidence sequences, with their exact and asymptotic
-  guarantees, are developed in Lindon (2026),
-  [arXiv:2610.25613](https://arxiv.org/abs/2610.25613).
+The penalty for economic migrants is detected after 500
+respondents, which is 2.8% of the
+survey. The Muslim penalty is detected after 750 respondents
+(4.2%), and the smaller Agnostic penalty after
+2,750 (15.3%). Each of these is a valid
+conclusion at the moment it is reached. A fixed-n analysis would have had to wait for all
+18,021 respondents. The difference between ethnic and
+political persecution is close to zero, and the confidence sequence never excludes zero, however
+long you watch.
 
 ### References
 

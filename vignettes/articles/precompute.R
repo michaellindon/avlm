@@ -3,4 +3,7 @@
 #   Rscript vignettes/articles/precompute.R
 old <- setwd("vignettes/articles")
 knitr::knit("conjoint.Rmd.orig", "conjoint.Rmd")
+# drop knitr's default "plot of chunk ..." captions
+out <- readLines("conjoint.Rmd")
+writeLines(out[!grepl('^<p class="caption">plot of chunk', out)], "conjoint.Rmd")
 setwd(old)
