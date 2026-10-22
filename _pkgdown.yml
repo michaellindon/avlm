@@ -28,3 +28,9 @@ reference:
 - title: Tuning
   contents:
   - optimal_g
+
+articles:
+- title: Examples
+  navbar: Examples
+  contents:
+  - articles/conjoint

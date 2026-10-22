@@ -1,0 +1,330 @@
+---
+title: "Anytime-valid conjoint analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Anytime-valid conjoint analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!-- This article is precomputed because irw_fetch() needs a Redivis login.
+     Edit conjoint.Rmd.orig, then run vignettes/articles/precompute.R. -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.path = "conjoint-",
+                      fig.width = 8, fig.height = 5, dpi = 144, out.width = "100%",
+                      dev = "ragg_png")
+```
+
+Conjoint experiments show each respondent several randomly generated profiles and ask
+them to choose between them. The usual estimand is the **average marginal component
+effect (AMCE)**: the change in the probability that a profile is chosen when one attribute
+moves from its baseline level to another level. Under randomization, AMCEs are the
+coefficients of a linear probability model. Each respondent answers several tasks, so
+standard errors are clustered by respondent.
+
+Conjoint surveys are fielded in waves and watched as responses arrive. Re-checking
+ordinary clustered p-values at every look inflates the false positive rate. `avlm` gives
+the same regression with **cluster-robust confidence sequences and anytime-valid
+p-values** (Lindon, 2026). You can look after every respondent and stop as soon as the
+answer is clear.
+
+## The data
+
+Bansak, Hainmueller and Hangartner (2016) asked 18,000 Europeans in 15 countries to choose
+between pairs of hypothetical asylum seekers, five pairs each. Each profile varied nine
+attributes. Here we use three of them: occupation, religion and the reason for migrating.
+The data are in the [Item Response Warehouse](https://itemresponsewarehouse.org/conjoint_standard.html):
+
+```{r data}
+library(irw)
+d <- irw_fetch("bansak_2016_asylum", source = "conj")
+d$attr_occupation <- relevel(factor(d$attr_occupation), "Unemployed")
+d$attr_religion   <- relevel(factor(d$attr_religion), "Christian")
+d$attr_reason     <- relevel(factor(d$attr_reason), "Persecution for political views")
+```
+
+Each respondent contributes ten rows, one per profile, and `choice` records which profile of
+each pair they picked:
+
+```{r respondent}
+r1 <- d[d$id == 1, c("task", "profile", "choice", "attr_occupation", "attr_religion",
+                     "attr_reason", "cov_survey_weight")]
+r1[order(r1$task, r1$profile), ]
+```
+
+## The standard analysis, and the avlm version
+
+The usual analysis is a weighted linear probability model with standard errors clustered
+by respondent:
+
+```{r standard}
+library(sandwich)
+fit <- lm(choice ~ attr_occupation + attr_religion + attr_reason, data = d,
+          weights = pmin(cov_survey_weight, 6))
+se <- sqrt(diag(vcovCL(fit, cluster = ~id)))
+round(cbind(AMCE = coef(fit), SE = se), 3)
+```
+
+These match the published estimates. Muslim applicants are about 11 points less likely to
+be chosen than Christian ones, and economic migrants about 15 points less likely than people
+fleeing political persecution.
+
+```{r g, include = FALSE}
+library(avlm)
+stopifnot(round(optimal_g(n = 18000, number_of_coefficients = 1, alpha = 0.05,
+                          nu = 17999)) == 2191)
+```
+
+The anytime-valid version uses the same fit and the same cluster formula:
+
+```{r avlm}
+library(avlm)
+afit <- av(fit, g = 2191, cluster = ~id)
+summary(afit)
+```
+
+`summary()` keeps the `lm` layout. It reports CR1 cluster-robust standard errors, the number
+of clusters, and anytime-valid p-values. The 147 respondents with a missing survey weight are
+dropped by `lm()`, and `av()` drops their clusters too. The standard errors match
+`vcovCL(fit, cluster = ~id, type = "HC0")` exactly:
+
+```{r se-check}
+all.equal(sqrt(diag(vcov(afit))), sqrt(diag(vcovCL(fit, cluster = ~id, type = "HC0"))))
+```
+
+`confint()` gives the 95% confidence sequences. Here they are next to the Wald intervals:
+
+```{r table}
+ci <- confint(afit)
+tab <- data.frame(
+  term = names(coef(fit))[-1],
+  amce = coef(fit)[-1],
+  wald_lo = (coef(fit) - qnorm(0.975) * se)[-1],
+  wald_hi = (coef(fit) + qnorm(0.975) * se)[-1],
+  av_lo = ci[-1, 1],
+  av_hi = ci[-1, 2],
+  av_p = coef(summary(afit))[-1, 4]
+)
+format(tab[, -1], digits = 2)
+```
+
+```{r theme, include = FALSE}
+library(ggplot2)
+fam <- if ("Inter" %in% systemfonts::system_fonts()$family) "Inter" else ""
+ink <- "#0b0b0b"; ink2 <- "#52514e"; muted <- "#8a8984"; grid <- "#e9e8e4"
+col_av <- "#2a78d6"; col_wald <- "#eb6834"
+theme_avlm <- function() {
+  theme_minimal(base_size = 12, base_family = fam) +
+    theme(plot.title = element_text(face = "bold", size = 15, colour = ink,
+                                    margin = margin(b = 4)),
+          plot.subtitle = element_text(colour = ink2, size = 11, margin = margin(b = 14)),
+          plot.title.position = "plot",
+          plot.caption = element_text(colour = muted, size = 9, hjust = 0),
+          plot.caption.position = "plot",
+          axis.text = element_text(colour = ink2), axis.title = element_text(colour = ink2),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(colour = grid, linewidth = 0.4),
+          strip.text = element_text(face = "bold", colour = ink, hjust = 0, size = 11),
+          legend.position = "none",
+          plot.margin = margin(12, 16, 10, 12))
+}
+pretty_term <- function(x) {
+  x <- sub("^attr_(occupation|religion|reason)", "", x)
+  sub("Seeking better economic opportunities", "Economic opportunities", x)
+}
+group_of <- function(x) {
+  factor(sub("^attr_(occupation|religion|reason).*", "\\1", x),
+         levels = c("occupation", "religion", "reason"),
+         labels = c("Occupation\nvs Unemployed", "Religion\nvs Christian",
+                    "Reason\nvs Political\npersecution"))
+}
+pct <- function(x) paste0(ifelse(x > 0, "+", ""), round(100 * x), " pts")
+```
+
+The anytime-valid intervals are wider than the Wald intervals. That width is what it costs
+to be allowed to look at the data at any time:
+
+```{r coefplot, echo = FALSE, fig.height = 5.6, fig.alt = "AMCE estimates with 95% Wald intervals and wider 95% anytime-valid confidence sequences, grouped by attribute."}
+cp <- transform(tab, label = pretty_term(term), group = group_of(term))
+cp$label <- reorder(cp$label, cp$amce)
+ggplot(cp, aes(y = label)) +
+  geom_vline(xintercept = 0, colour = muted, linewidth = 0.4) +
+  geom_segment(aes(x = av_lo, xend = av_hi, yend = label), colour = col_av,
+               alpha = 0.35, linewidth = 5, lineend = "round") +
+  geom_segment(aes(x = wald_lo, xend = wald_hi, yend = label), colour = col_av,
+               linewidth = 1.1, lineend = "round") +
+  geom_point(aes(x = amce), colour = ink, size = 2.4) +
+  facet_grid(rows = vars(group), scales = "free_y", space = "free_y") +
+  scale_x_continuous(labels = function(x) pct(x), breaks = seq(-0.15, 0.15, 0.05)) +
+  labs(title = "What makes an asylum seeker more likely to be accepted",
+       subtitle = paste0("Change in the probability a profile is chosen.\n",
+                         "Thin bar: 95% Wald interval.  Wide band: 95% anytime-valid confidence sequence."),
+       x = NULL, y = NULL,
+       caption = "Bansak, Hainmueller & Hangartner (2016), 17,874 respondents. Errors clustered by respondent.") +
+  theme_avlm() +
+  theme(panel.grid.major.y = element_blank(),
+        strip.text.y.right = element_text(angle = 0, hjust = 0, vjust = 0.5, face = "plain",
+                                          colour = ink2, size = 9.5, lineheight = 1.1,
+                                          margin = margin(l = 10)),
+        panel.spacing.y = unit(10, "pt"))
+```
+
+## Watching the survey come in
+
+Suppose the survey had been analysed while it was fielded, re-running the regression after
+every 250 respondents. The data do not record the order in which people responded, so we
+replay the respondents in a random order. The confidence sequences are valid
+**simultaneously at every look**, so we can stop as soon as an AMCE is clearly different
+from zero. With Wald intervals that is not allowed, as the next section shows.
+
+```{r monitor}
+set.seed(2016)
+arrival <- sample(unique(d$id))
+d$arrival <- match(d$id, arrival)
+
+looks <- seq(250, length(arrival), by = 250)
+terms <- c("attr_reasonSeeking better economic opportunities", "attr_religionMuslim",
+           "attr_religionAgnostic", "attr_reasonPersecution for ethnicity")
+
+path <- do.call(rbind, lapply(looks, function(n_resp) {
+  fit_n <- lm(choice ~ attr_occupation + attr_religion + attr_reason,
+              data = d[d$arrival <= n_resp, ], weights = pmin(cov_survey_weight, 6))
+  ci_n <- confint(av(fit_n, g = 2191, cluster = ~id), parm = terms)
+  se_n <- sqrt(diag(vcovCL(fit_n, cluster = ~id)))[terms]
+  data.frame(respondents = n_resp, term = terms, est = coef(fit_n)[terms],
+             av_lo = ci_n[, 1], av_hi = ci_n[, 2],
+             wald_lo = coef(fit_n)[terms] - qnorm(0.975) * se_n,
+             wald_hi = coef(fit_n)[terms] + qnorm(0.975) * se_n)
+}))
+
+# first look at which each confidence sequence excludes zero
+settled_at <- sapply(split(path, path$term), function(p) {
+  p$respondents[which(p$av_hi < 0 | p$av_lo > 0)[1]]
+})
+settled_at[terms]
+```
+
+```{r monitor-plot, echo = FALSE, fig.height = 6.4, fig.alt = "Confidence sequences for four AMCEs narrowing as respondents arrive, with the point where each first excludes zero marked."}
+nice <- c(`attr_reasonSeeking better economic opportunities` = "Economic migrant",
+          attr_religionMuslim = "Muslim",
+          attr_religionAgnostic = "Agnostic",
+          `attr_reasonPersecution for ethnicity` = "Fled ethnic persecution")
+path$panel <- factor(nice[path$term], levels = nice[terms])
+st <- path[!is.na(settled_at[path$term]) & path$respondents == settled_at[path$term], ]
+st$panel <- factor(nice[st$term], levels = nice[terms])
+st$lab <- paste0("Settled at ", formatC(st$respondents, big.mark = ",", format = "d"))
+never <- setdiff(nice[terms], as.character(st$panel))
+nv <- data.frame(panel = factor(never, levels = nice[terms]), respondents = max(looks),
+                 lab = "Never excludes zero")
+nv$y <- sapply(never, function(p) max(path$av_hi[path$panel == p]))
+
+ggplot(path, aes(respondents)) +
+  geom_hline(yintercept = 0, colour = muted, linewidth = 0.4) +
+  geom_ribbon(aes(ymin = av_lo, ymax = av_hi), fill = col_av, alpha = 0.22) +
+  geom_line(aes(y = wald_lo), colour = col_wald, linewidth = 0.6) +
+  geom_line(aes(y = wald_hi), colour = col_wald, linewidth = 0.6) +
+  geom_line(aes(y = est), colour = ink, linewidth = 0.8) +
+  geom_vline(data = st, aes(xintercept = respondents), colour = ink2, linewidth = 0.4,
+             linetype = "22") +
+  geom_point(data = st, aes(y = est), colour = ink, fill = "white", shape = 21,
+             size = 3, stroke = 1.1) +
+  geom_label(data = st, aes(x = respondents, y = Inf, label = lab),
+             family = fam, hjust = -0.06, vjust = 1.3, size = 3.3, colour = ink, label.size = 0,
+             fill = "white") +
+  geom_text(data = nv, aes(x = respondents, y = y, label = lab), family = fam,
+            hjust = 1, vjust = 1, size = 3.3, colour = ink2) +
+  facet_wrap(~panel, ncol = 2, scales = "free_y") +
+  scale_x_log10(breaks = c(250, 500, 1000, 2500, 5000, 10000),
+                labels = function(x) formatC(round(x), big.mark = ",", format = "d"),
+                expand = expansion(mult = c(0.01, 0.02))) +
+  scale_y_continuous(labels = function(x) pct(x)) +
+  labs(title = "Most of the survey was not needed to settle the big effects",
+       subtitle = paste0("AMCE as respondents arrive.\n",
+                         "Blue band: 95% anytime-valid confidence sequence.  Orange lines: 95% Wald interval."),
+       x = "Respondents so far (log scale)", y = NULL,
+       caption = "Baselines: Christian applicant; fled political persecution. Respondents replayed in random order.") +
+  theme_avlm() +
+  theme(panel.spacing = unit(18, "pt"))
+```
+
+The penalty for economic migrants and the penalty for Muslim applicants are settled with a
+small fraction of the 18,000 respondents. The Agnostic penalty takes longer. The difference
+between ethnic and political persecution is close to zero and is never declared different
+from zero, however long you watch.
+
+## Why not just peek at the clustered Wald p-values?
+
+To see what goes wrong, add a **placebo attribute** to the real data: a random label,
+"A" or "B", given to each profile independently of everything else. Its true AMCE is zero by
+construction, and the real respondents' choices keep their real within-respondent
+correlation. We look after every 100 respondents up to 2,000 and record when each test first
+rejects at the 5% level:
+
+```{r null-sim}
+set.seed(1)
+reps <- 500
+looks_null <- seq(100, 2000, by = 100)
+
+rejected <- replicate(reps, {
+  first <- sample(unique(d$id), 2000)
+  d0 <- d[d$id %in% first, ]
+  d0$arrival <- match(d0$id, first)
+  d0$placebo <- factor(sample(c("A", "B"), nrow(d0), replace = TRUE))
+  sapply(looks_null, function(n_resp) {
+    fit0 <- lm(choice ~ placebo, data = d0[d0$arrival <= n_resp, ],
+               weights = pmin(cov_survey_weight, 6))
+    afit0 <- av(fit0, g = 2191, cluster = ~id)
+    z <- coef(fit0)[["placeboB"]] / sqrt(vcov(afit0)["placeboB", "placeboB"])
+    c(wald = 2 * pnorm(-abs(z)) < 0.05,
+      avlm = coef(summary(afit0))["placeboB", 4] < 0.05)
+  })
+})
+# rejected[test, look, rep]; has a test rejected at this look or any earlier one?
+ever <- apply(rejected, c(1, 3), cummax)
+false_positive_rate <- apply(ever, c(1, 2), mean)
+false_positive_rate[nrow(false_positive_rate), ]
+```
+
+```{r null-plot, echo = FALSE, fig.height = 4.6, fig.alt = "Share of placebo surveys with a false positive by each look: rising well past 5% for repeated Wald tests, staying near zero for avlm."}
+fp <- data.frame(respondents = rep(looks_null, 2),
+                 test = rep(c("Wald, checked at every look", "avlm"), each = length(looks_null)),
+                 rate = c(false_positive_rate[, "wald"], false_positive_rate[, "avlm"]))
+ends <- fp[fp$respondents == max(looks_null), ]
+ggplot(fp, aes(respondents, rate, colour = test)) +
+  geom_hline(yintercept = 0.05, colour = muted, linewidth = 0.4, linetype = "22") +
+  annotate("text", x = 1000, y = 0.05, label = "Promised 5%", hjust = 0.5, vjust = -0.6,
+           size = 3.3, colour = ink2, family = fam) +
+  geom_line(linewidth = 1) +
+  geom_point(data = ends, size = 2.6) +
+  geom_text(data = ends, aes(label = paste0(test, ": ", round(100 * rate), "%")),
+            hjust = 1, vjust = -1.1, size = 3.5, family = fam, fontface = "bold") +
+  scale_colour_manual(values = c("Wald, checked at every look" = col_wald, avlm = col_av)) +
+  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%"),
+                     limits = c(0, NA), expand = expansion(mult = c(0, 0.12))) +
+  scale_x_continuous(labels = function(x) format(x, big.mark = ",")) +
+  labs(title = "Peeking at Wald p-values finds effects that are not there",
+       subtitle = "Share of 500 placebo surveys that have declared a significant effect by each look.",
+       x = "Respondents so far", y = NULL) +
+  theme_avlm()
+```
+
+Checking the clustered Wald test 20 times gives a false positive rate several times the
+promised 5%. The anytime-valid test stays below 5% however often you look.
+
+## Notes
+
+* `av(fit, cluster = ~id)` takes a one-sided formula, a column name (`"id"`), or a vector of
+  ids. Weights, `subset` and missing values are handled the same way as in `lm()`.
+* The cluster-robust e-values and confidence sequences, with their exact and asymptotic
+  guarantees, are developed in Lindon (2026),
+  [arXiv:2610.25613](https://arxiv.org/abs/2610.25613).
+
+### References
+
+Bansak, K., Hainmueller, J. and Hangartner, D. (2016). How economic, humanitarian, and
+religious concerns shape European attitudes toward asylum seekers. *Science*, 354(6309),
+217–222.
+
+Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact
+Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613.
