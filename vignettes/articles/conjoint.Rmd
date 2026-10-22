@@ -23,7 +23,8 @@ Conjoint surveys are fielded in waves and watched as responses arrive. Re-checki
 ordinary clustered p-values at every look inflates the false positive rate. `avlm` gives
 the same regression with **cluster-robust confidence sequences and anytime-valid
 p-values** (Lindon, 2026). You can look after every respondent and stop as soon as the
-answer is clear.
+answer is clear. Anytime-valid inference for conjoint experiments is developed in
+[arXiv:2610.28979](https://arxiv.org/abs/2610.28979).
 
 ## The data
 
@@ -325,3 +326,6 @@ religious concerns shape European attitudes toward asylum seekers. *Science*, 35
 
 Lindon, M. (2026). Anytime-Valid Inference in Linear Models with Clustered Outcomes: Exact
 Multivariate Tests and Cluster-Robust Confidence Sequences. arXiv:2610.25613.
+
+Anytime-Valid Inference in Conjoint Experiments (2026).
+[arXiv:2610.28979](https://arxiv.org/abs/2610.28979).
