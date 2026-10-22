@@ -14,4 +14,5 @@ Roxygen: list(markdown = TRUE)
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Config/Needs/website: rmarkdown
 Config/roxygen2/version: 8.0.0
