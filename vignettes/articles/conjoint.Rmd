@@ -306,11 +306,6 @@ false_positive_rate[nrow(false_positive_rate), ]
 #> 0.236 0.000
 ```
 
-<div class="figure">
-<img src="conjoint-null-plot-1.png" alt="Share of placebo surveys with a false positive by each look: rising well past 5% for repeated Wald tests, staying near zero for avlm." width="100%" />
-<p class="caption">plot of chunk null-plot</p>
-</div>
-
 Checking the clustered Wald test 20 times gives a false positive rate several times the
 promised 5%. The anytime-valid test stays below 5% however often you look.
 

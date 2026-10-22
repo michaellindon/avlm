@@ -286,29 +286,6 @@ false_positive_rate <- apply(ever, c(1, 2), mean)
 false_positive_rate[nrow(false_positive_rate), ]
 ```
 
-```{r null-plot, echo = FALSE, fig.height = 4.6, fig.alt = "Share of placebo surveys with a false positive by each look: rising well past 5% for repeated Wald tests, staying near zero for avlm."}
-fp <- data.frame(respondents = rep(looks_null, 2),
-                 test = rep(c("Wald, checked at every look", "avlm"), each = length(looks_null)),
-                 rate = c(false_positive_rate[, "wald"], false_positive_rate[, "avlm"]))
-ends <- fp[fp$respondents == max(looks_null), ]
-ggplot(fp, aes(respondents, rate, colour = test)) +
-  geom_hline(yintercept = 0.05, colour = muted, linewidth = 0.4, linetype = "22") +
-  annotate("text", x = 1000, y = 0.05, label = "Promised 5%", hjust = 0.5, vjust = -0.6,
-           size = 3.3, colour = ink2, family = fam) +
-  geom_line(linewidth = 1) +
-  geom_point(data = ends, size = 2.6) +
-  geom_text(data = ends, aes(label = paste0(test, ": ", round(100 * rate), "%")),
-            hjust = 1, vjust = -1.1, size = 3.5, family = fam, fontface = "bold") +
-  scale_colour_manual(values = c("Wald, checked at every look" = col_wald, avlm = col_av)) +
-  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%"),
-                     limits = c(0, NA), expand = expansion(mult = c(0, 0.12))) +
-  scale_x_continuous(labels = function(x) format(x, big.mark = ",")) +
-  labs(title = "Peeking at Wald p-values finds effects that are not there",
-       subtitle = "Share of 500 placebo surveys that have declared a significant effect by each look.",
-       x = "Respondents so far", y = NULL) +
-  theme_avlm()
-```
-
 Checking the clustered Wald test 20 times gives a false positive rate several times the
 promised 5%. The anytime-valid test stays below 5% however often you look.
 
