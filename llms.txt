@@ -179,3 +179,9 @@ Convert a fitted `lm` or `aov` model into an anytime-valid one.
   : Computes the value of g such that width of the \\1-\alpha\\
   confidence interval at sample size n is minimized
 
+# Articles
+
+### Examples
+
+- [Anytime-valid conjoint
+  analysis](https://michaellindon.github.io/avlm/articles/conjoint.md):

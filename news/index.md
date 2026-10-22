@@ -25,6 +25,8 @@
 
 ## avlm 0.2.0
 
+CRAN release: 2026-10-21
+
 ### New Features
 
 - [`av.lm()`](https://michaellindon.github.io/avlm/reference/av.lm.md)
